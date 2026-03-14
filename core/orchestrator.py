@@ -116,7 +116,25 @@ class OrderProcessingOrchestrator:
         self.order_manager.update_matched_order(order_id, matched_order)
         
         self.order_manager.update_order_status(order_id, OrderStatus.RISK_CHECKING)
-        risk_result = self.risk_agent.run({"matched_order": matched_order})
+        
+        reference_prices = {}
+        for idx, item in enumerate(matched_order.items):
+            if hasattr(item, 'sku_code') and item.sku_code:
+                try:
+                    if hasattr(self.matching_agent, 'faiss_manager'):
+                        search_text = f"{item.sku_code} {item.matched_material_name or ''}"
+                        results = self.matching_agent.faiss_manager.search(search_text, k=1)
+                        if results:
+                            doc, _ = results[0]
+                            reference_prices[idx] = doc.get('reference_price')
+                except:
+                    pass
+        
+        risk_input = {
+            "matched_order": matched_order,
+            "reference_prices": reference_prices
+        }
+        risk_result = self.risk_agent.run(risk_input)
         
         if not risk_result["success"]:
             self.order_manager.set_error(order_id, risk_result["message"])
@@ -129,10 +147,13 @@ class OrderProcessingOrchestrator:
         risk_check_result = risk_result["risk_result"]
         self.order_manager.update_risk_result(order_id, risk_check_result)
         
+        low_match_score = any(item.match_score < 0.8 for item in matched_order.items if hasattr(item, 'match_score'))
+        needs_confirmation = low_match_score or risk_check_result.needs_confirmation
+        
         final_status = OrderStatus.COMPLETED
-        if risk_check_result.needs_confirmation:
+        if needs_confirmation:
             final_status = OrderStatus.NEEDS_CONFIRMATION
-            confirmation_request = self._create_confirmation_request(order_id, risk_check_result)
+            confirmation_request = self._create_confirmation_request(order_id, risk_check_result, matched_order, low_match_score)
             self.order_manager.add_confirmation_request(order_id, confirmation_request)
         
         self.order_manager.update_order_status(order_id, final_status)
@@ -149,11 +170,11 @@ class OrderProcessingOrchestrator:
             "success": True,
             "order_id": order_id,
             "final_result": final_result,
-            "needs_confirmation": risk_check_result.needs_confirmation,
+            "needs_confirmation": needs_confirmation,
             "message": "订单处理完成"
         }
     
-    def _create_confirmation_request(self, order_id: str, risk_result: Any) -> Dict[str, Any]:
+    def _create_confirmation_request(self, order_id: str, risk_result: Any, matched_order: Any = None, low_match_score: bool = False) -> Dict[str, Any]:
         issues_summary = []
         for issue in risk_result.issues:
             issues_summary.append({
@@ -163,11 +184,19 @@ class OrderProcessingOrchestrator:
                 "severity": issue.severity
             })
         
+        reasons = []
+        if low_match_score:
+            reasons.append("部分物料匹配得分低于 0.8")
+        if risk_result.issues:
+            reasons.append(f"发现 {len(risk_result.issues)} 个风险问题")
+        
         return {
             "type": "risk_confirmation",
             "order_id": order_id,
             "overall_confidence": risk_result.overall_confidence,
             "issues": issues_summary,
+            "needs_confirmation_reasons": reasons,
+            "low_match_score": low_match_score,
             "timestamp": None,
             "required_actions": ["review_issues", "confirm_or_reject"]
         }

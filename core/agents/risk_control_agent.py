@@ -34,7 +34,7 @@ class RiskControlAgent(BaseAgent):
     
     def _check_price_abnormality(self, item: Any, item_index: int, reference_price: float = None) -> List[RiskIssue]:
         issues = []
-        if item.unit_price:
+        if item.unit_price is not None:
             if item.unit_price <= 0:
                 issues.append(RiskIssue(
                     item_index=item_index,
@@ -42,7 +42,7 @@ class RiskControlAgent(BaseAgent):
                     description=f"单价 {item.unit_price} 无效，必须大于 0",
                     severity="high"
                 ))
-            elif reference_price:
+            elif reference_price and reference_price > 0:
                 price_ratio = item.unit_price / reference_price
                 if price_ratio > 2.0 or price_ratio < 0.5:
                     issues.append(RiskIssue(
@@ -104,12 +104,15 @@ class RiskControlAgent(BaseAgent):
             if not matched_order:
                 raise ValueError("匹配订单不能为空")
             
+            reference_prices = input_data.get("reference_prices", {})
+            
             all_issues: List[RiskIssue] = []
             
             for idx, item in enumerate(matched_order.items):
+                reference_price = reference_prices.get(idx)
                 all_issues.extend(self._check_parsing_confidence(item, idx))
                 all_issues.extend(self._check_match_score(item, idx))
-                all_issues.extend(self._check_price_abnormality(item, idx))
+                all_issues.extend(self._check_price_abnormality(item, idx, reference_price))
                 all_issues.extend(self._check_delivery_date(item, idx))
                 all_issues.extend(self._check_quantity(item, idx))
             

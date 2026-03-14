@@ -1,78 +1,166 @@
-# 制造业多 Agent 智能订单解析系统
+# 🏭 制造业多 Agent 智能订单解析系统
 
 基于 LangChain 和 Multi-Agent 架构的智能订单解析系统，支持处理 PDF/Excel/图片等多种格式的非结构化订单，并将其转化为 ERP 可用的标准结构化数据。
 
-## 技术栈
+## ✨ 核心特性
 
-- **语言**: Python 3.10+
-- **框架**: LangChain (LCEL 架构)
-- **LLM API**: 阿里云 Qwen 系列 (通义千问)
-  - `qwen-max` - Agent 逻辑决策、字段提取
-  - `qwen-plus` - 通用订单解析（性价比最高）
-  - `qwen-vl-plus` - 图片/OCR/扫描件订单
-- **向量数据库**: FAISS
-- **后端**: Flask + Flask-CORS
-- **文档处理**: PyMuPDF (PDF), Pandas (Excel), OpenPyXL
+- 🤖 **三 Agent 协作**: Parser Agent + Matching Agent + Risk Control Agent
+- 🎯 **智能模型选择**: 根据场景自动选择最优 Qwen 模型
+- 📊 **可视化前端**: Streamlit 演示界面，实时展示 Agent 协作过程
+- 🔍 **向量检索**: FAISS + Sentence-Transformers 语义匹配
+- 🛡️ **智能风控**: 自动检测异常，触发人工确认机制
 
-## 迁移说明
+---
 
-从 Deepseek 迁移到 Qwen，请参考 [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)
+## 🛠️ 技术栈
 
-## 系统架构
+| 类别 | 技术 |
+|------|------|
+| **语言** | Python 3.10+ |
+| **框架** | LangChain (LCEL 架构) |
+| **LLM** | 阿里云 Qwen 系列 (通义千问) |
+| **向量数据库** | FAISS |
+| **后端** | Flask + Flask-CORS |
+| **前端** | Streamlit |
+| **文档处理** | PyMuPDF (PDF), Pandas (Excel), OpenPyXL |
 
-### Multi-Agent 协作
+### Qwen 模型策略
 
-1. **Parser Agent (解析智能体)**
-   - 从不同格式文档中提取字段（物料名、规格、数量、交期、单价等）
-   - 使用 Prompt Chain 结合 Pydantic 进行结构化输出
+| 场景 | 使用模型 | 说明 |
+|------|---------|------|
+| Agent 逻辑决策 | `qwen-max` | 最强逻辑能力 |
+| 通用订单解析 | `qwen-plus` | 性价比最高 |
+| 图片/OCR/扫描件 | `qwen-vl-plus` | 视觉理解能力 |
 
-2. **Matching Agent (匹配智能体)**
-   - 将提取的非标字段映射到工厂的标准物料库
-   - 利用 FAISS 进行语义向量检索，寻找最匹配的 SKU 编号
+---
 
-3. **Risk Control Agent (风控智能体)**
-   - 检测异常逻辑（单价异常高、交期冲突等）
-   - 置信度阈值：若 < 0.8 或逻辑冲突，触发多轮反问机制
+## 🏗️ 系统架构
 
-## 项目结构
+### Multi-Agent 协作流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        订单输入                              │
+│              (文本/PDF/Excel/图片)                         │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Parser Agent (解析智能体)                  │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ • 提取订单字段 (物料名、规格、数量、交期、单价等)      │  │
+│  • 使用 Pydantic 进行结构化输出                          │  │
+│  • 模型: qwen-plus/qwen-vl-plus                          │  │
+│  └───────────────────────────────────────────────────────┘  │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Matching Agent (匹配智能体)                 │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ • FAISS 语义向量检索                                    │  │
+│  • 将非标字段映射到标准物料库                              │  │
+│  • 计算匹配得分 (match_score)                              │  │
+│  └───────────────────────────────────────────────────────┘  │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Risk Control Agent (风控智能体)               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ • 检测异常: 单价、交期、匹配得分                         │  │
+│  • 置信度阈值: < 0.8 或发现问题 → 触发人工确认             │  │
+│  └───────────────────────────────────────────────────────┘  │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+         ┌───────────┴───────────┐
+         ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐
+│   COMPLETED     │    │ NEEDS_CONFIRMATION│
+│   (已完成)      │    │   (需人工确认)    │
+└─────────────────┘    └────────┬─────────┘
+                                  │
+                           用户确认/拒绝
+                                  │
+                           ┌──────┴──────┐
+                           ▼             ▼
+                    ┌──────────┐  ┌─────────┐
+                    │ COMPLETED│  │ FAILED  │
+                    │ (已完成) │  │ (已失败)│
+                    └──────────┘  └─────────┘
+```
+
+### 核心 Agent 详解
+
+#### 1. Parser Agent (解析智能体)
+- **功能**: 从不同格式文档中提取结构化字段
+- **输出**: `ParsedOrder` 对象
+- **支持场景**:
+  - 通用文本/PDF/Excel → `qwen-plus`
+  - 图片/OCR/扫描件 → `qwen-vl-plus`
+  - 复杂逻辑决策 → `qwen-max`
+
+#### 2. Matching Agent (匹配智能体)
+- **功能**: 将非标字段映射到工厂标准物料库
+- **技术**: FAISS 向量检索 + Sentence-Transformers
+- **输出**: `MatchedOrder` 对象，包含 SKU 和匹配得分
+
+#### 3. Risk Control Agent (风控智能体)
+- **功能**: 检测异常逻辑
+- **检查项**:
+  - 单价异常 (参考标准价格)
+  - 交期冲突 (过期/无效格式)
+  - 匹配得分低 (< 0.8)
+  - 解析置信度低
+- **输出**: `RiskCheckResult`，决定是否需要人工确认
+
+---
+
+## 📁 项目结构
 
 ```
 AGENT_project/
-├── app.py                  # Flask 应用主入口
-├── config.py               # 配置文件
+├── app.py                      # Flask 应用主入口
+├── streamlit_app.py            # Streamlit 可视化演示
+├── config.py                   # 配置文件
+├── requirements.txt            # Python 依赖
+│
 ├── core/
-│   ├── agents/             # Agent 实现
-│   │   ├── base_agent.py       # Agent 基类
-│   │   ├── parser_agent.py     # 解析智能体
-│   │   ├── matching_agent.py   # 匹配智能体
+│   ├── agents/                 # Agent 实现
+│   │   ├── base_agent.py           # Agent 基类
+│   │   ├── parser_agent.py         # 解析智能体
+│   │   ├── matching_agent.py       # 匹配智能体
 │   │   └── risk_control_agent.py  # 风控智能体
-│   ├── models.py           # 数据模型
-│   ├── utils/              # 核心工具
-│   │   └── order_manager.py    # 订单状态管理
-│   └── orchestrator.py     # Agent 协作编排器
+│   ├── models.py               # 数据模型 (Pydantic)
+│   ├── utils/                  # 核心工具
+│   │   └── order_manager.py       # 订单状态管理
+│   └── orchestrator.py         # Agent 协作编排器
+│
 ├── data/
-│   ├── faiss_index/        # FAISS 索引
-│   ├── sample_orders/      # 示例订单
-│   └── standard_materials/ # 标准物料库
-├── routes/                 # Flask 路由
-├── scripts/                # 工具脚本
-│   ├── init_faiss_index.py # 初始化 FAISS 索引
-│   ├── test_agents.py      # Agent 测试脚本
-│   ├── test_orchestrator.py  # 编排器测试脚本
-│   └── test_api.py         # API 测试脚本
+│   ├── standard_materials.csv  # 标准物料库 (CSV)
+│   ├── faiss_index/            # FAISS 向量索引
+│   └── sample_orders/          # 示例订单存储
+│
 ├── utils/
-│   ├── data_processing/    # 文档处理工具
-│   │   └── document_loader.py
-│   └── vector_store/       # 向量存储工具
-│       └── faiss_manager.py
-├── .env                    # 环境变量
-├── .env.example            # 环境变量示例
-├── .gitignore
-├── requirements.txt        # Python 依赖
+│   ├── data_processing/        # 文档处理工具
+│   │   └── document_loader.py      # PDF/Excel/图片加载
+│   └── vector_store/           # 向量存储工具
+│       └── faiss_manager.py        # FAISS 管理
+│
+├── scripts/
+│   ├── init_faiss_index.py     # 初始化 FAISS 索引
+│   ├── test_agents.py          # Agent 测试
+│   ├── test_orchestrator.py    # 编排器测试
+│   └── test_api.py             # API 测试
+│
+├── .env                        # 环境变量
+├── .env.example                # 环境变量示例
 └── README.md
 ```
 
-## 快速开始
+---
+
+## 🚀 快速开始
 
 ### 1. 安装依赖
 
@@ -82,93 +170,194 @@ pip install -r requirements.txt
 
 ### 2. 配置环境变量
 
-复制 `.env.example` 为 `.env`，并填写你的 Deepseek API Key：
+复制 `.env.example` 为 `.env`：
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，设置 `DEEPSEEK_API_KEY`。
+编辑 `.env` 文件，配置 Qwen API Key：
 
-### 3. 初始化 FAISS 向量索引
+```env
+# Qwen 配置
+QWEN_API_KEY=your_qwen_api_key_here
+QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
-```bash
-python scripts/init_faiss_index.py
+# 模型选择
+QWEN_MODEL_MAX=qwen-max
+QWEN_MODEL_PLUS=qwen-plus
+QWEN_MODEL_VL=qwen-vl-plus
+
+# Flask 配置
+FLASK_PORT=5001
+FLASK_DEBUG=true
+
+# 风控配置
+RISK_CONFIDENCE_THRESHOLD=0.8
+
+# 路径配置
+DATA_DIR=data
+FAISS_INDEX_PATH=data/faiss_index
+STANDARD_MATERIALS_PATH=data/standard_materials
 ```
 
-### 4. 测试 Agent
+### 3. 准备标准物料库
+
+`data/standard_materials.csv` 已包含示例数据，格式如下：
+
+| sku_code | material_name | specification | unit | reference_price | category |
+|----------|---------------|---------------|------|-----------------|----------|
+| SKU-001 | 不锈钢螺丝 | M8x30 | 个 | 0.50 | 紧固件 |
+| SKU-002 | 不锈钢螺丝 | M6x20 | 个 | 0.35 | 紧固件 |
+| ... | ... | ... | ... | ... | ... |
+
+### 4. 初始化 FAISS 向量索引
 
 ```bash
-python scripts/test_agents.py
+python3 scripts/init_faiss_index.py
 ```
 
-### 5. 测试编排器
+### 5. 启动服务
+
+#### 方式一: Streamlit 可视化演示 (推荐)
 
 ```bash
-python scripts/test_orchestrator.py
+streamlit run streamlit_app.py
 ```
 
-### 6. 启动 Flask 服务
+访问: http://localhost:8501
+
+#### 方式二: Flask API 服务
 
 ```bash
 python3 app.py
 ```
 
-服务将在 http://localhost:5000 启动
+服务将在 http://localhost:5001 启动
 
-### 7. 测试 API
+---
 
-```bash
-python3 scripts/test_api.py
+## 🌐 API 接口
+
+### 健康检查
+```http
+GET /api/health
 ```
 
-## Phase 1 - 已完成
+### 上传文件解析
+```http
+POST /api/upload
+Content-Type: multipart/form-data
 
-- [x] 创建标准的 Python 项目结构
-- [x] 配置 `.env` 环境文件
-- [x] 建立 `core/`, `api/`, `utils/`, `data/` 文件夹
-- [x] 创建配置文件和数据模型
+file: [PDF/Excel/PNG/JPG 订单文件]
+```
 
-## Phase 2 - 已完成
+### 文本订单解析
+```http
+POST /api/upload_text
+Content-Type: application/json
 
-- [x] 实现基础 Agent 基类 (`core/agents/base_agent.py`)
-- [x] 实现 Parser Agent，支持 Pydantic Output Parser (`core/agents/parser_agent.py`)
-- [x] 实现 Matching Agent，集成 FAISS 向量检索 (`core/agents/matching_agent.py`)
-- [x] 实现 Risk Control Agent (`core/agents/risk_control_agent.py`)
-- [x] 提供标准物料库示例数据 (`data/standard_materials/sample_materials.json`)
-- [x] 创建 FAISS 索引初始化脚本 (`scripts/init_faiss_index.py`)
-- [x] 创建 Agent 测试脚本 (`scripts/test_agents.py`)
+{
+  "order_text": "订单文本内容..."
+}
+```
 
-## Phase 3 - 已完成
+### 查询订单状态
+```http
+GET /api/query_status/{order_id}
+```
 
-- [x] 创建订单状态管理模块 (`core/utils/order_manager.py`)
-- [x] 实现 Agent 协作编排器 (`core/orchestrator.py`)
-- [x] 实现 Parser Agent -> Matching Agent -> Risk Control Agent 完整流程
-- [x] 实现多轮反问逻辑（需要人工确认时返回特定 JSON 结构）
-- [x] 支持订单确认/拒绝操作
-- [x] 创建编排器测试脚本 (`scripts/test_orchestrator.py`)
+### 人工确认
+```http
+POST /api/confirm/{order_id}
+Content-Type: application/json
 
-## Phase 4 - 已完成
+{
+  "action": "confirm"  // 或 "reject"
+}
+```
 
-- [x] 创建 Flask 应用主入口 (`app.py`)
-- [x] 实现 `/api/health` 健康检查接口
-- [x] 实现 `/api/upload` 接口（接收文档并启动解析流）
-- [x] 实现 `/api/upload_text` 接口（接收纯文本订单）
-- [x] 实现 `/api/query_status/<order_id>` 接口（查看解析进度与人工干预状态）
-- [x] 实现 `/api/confirm/<order_id>` 接口（处理人工确认/拒绝）
-- [x] 支持 CORS 跨域请求
-- [x] 创建 API 测试脚本 (`scripts/test_api.py`)
+---
 
-### API 接口文档
+## 📊 Streamlit 演示功能
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/api/health` | 健康检查 |
-| POST | `/api/upload` | 上传订单文档 (PDF/Excel/图片) |
-| POST | `/api/upload_text` | 上传纯文本订单 |
-| GET | `/api/query_status/<order_id>` | 查询订单状态 |
-| POST | `/api/confirm/<order_id>` | 确认或拒绝订单 (action: confirm/reject)
+### 左侧边栏
+- 📊 **统计数据**: 处理订单数、节省工时
+- ⚙️ **配置**: Qwen API Key 设置
+- 🛠️ **工具**: 清除缓存、Agent 状态显示
 
-## License
+### 订单解析
+- 📝 **文本输入**: 直接粘贴订单文本
+- 📁 **文件上传**: 支持 PDF/Excel/图片
+- 🔄 **实时状态**: 动态展示三个 Agent 的协作过程
+- 📋 **结果展示**: 美观的数据表格，高亮低匹配得分
 
-MIT
+### 人工确认
+- ⚠️ **异常高亮**: 红色显示风险问题
+- ✏️ **手动修正**: 提供确认/拒绝操作
+
+---
+
+## 🔧 数据模型
+
+### ParsedOrder (解析结果)
+```python
+{
+  "order_number": "ORD-2024-001",
+  "customer_name": "XX公司",
+  "items": [...],
+  "total_amount": 1000.0,
+  "parsing_confidence": 0.95
+}
+```
+
+### MatchedOrder (匹配结果)
+```python
+{
+  "order_number": "ORD-2024-001",
+  "items": [
+    {
+      "material_name": "不锈钢螺丝",
+      "specification": "M8x30",
+      "quantity": 1000,
+      "sku_code": "SKU-001",
+      "matched_material_name": "不锈钢螺丝",
+      "match_score": 0.95
+    }
+  ]
+}
+```
+
+### RiskCheckResult (风控结果)
+```python
+{
+  "needs_confirmation": true,
+  "issues": [
+    {
+      "item_index": 0,
+      "issue_type": "low_match_score",
+      "description": "匹配得分低于阈值",
+      "severity": "medium"
+    }
+  ],
+  "overall_confidence": 0.75
+}
+```
+
+---
+
+## 📚 迁移说明
+
+从 Deepseek 迁移到 Qwen，请参考 [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📄 许可证
+
+MIT License

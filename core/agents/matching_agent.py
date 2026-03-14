@@ -19,7 +19,21 @@ class MatchingAgent(BaseAgent):
         return max(0.0, min(1.0, 1.0 - distance / 2.0))
     
     def _match_item(self, item: Any) -> MatchedOrderItem:
-        query_text = f"{item.material_name} {item.specification}"
+        query_text = f"{item.material_name or ''} {item.specification or ''}".strip()
+        
+        if not query_text:
+            return MatchedOrderItem(
+                material_name=item.material_name,
+                specification=item.specification,
+                quantity=item.quantity,
+                unit=item.unit,
+                unit_price=item.unit_price,
+                delivery_date=item.delivery_date,
+                confidence_score=item.confidence_score,
+                sku_code=None,
+                matched_material_name=None,
+                match_score=0.0
+            )
         
         search_results = self.faiss_manager.search(query_text, k=3)
         

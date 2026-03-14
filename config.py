@@ -13,8 +13,9 @@ class Config:
     
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "1") == "1"
-    FLASK_PORT = int(os.getenv("FLASK_PORT", 5000))
+    FLASK_PORT = int(os.getenv("FLASK_PORT", 5001))
     
+    DATA_DIR = os.getenv("DATA_DIR", "data")
     FAISS_INDEX_PATH = os.getenv("FAISS_INDEX_PATH", "data/faiss_index")
     STANDARD_MATERIALS_PATH = os.getenv("STANDARD_MATERIALS_PATH", "data/standard_materials")
     
