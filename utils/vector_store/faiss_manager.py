@@ -48,6 +48,7 @@ class FAISSManager:
         return results
     
     def _save_index(self):
+        os.makedirs(self.index_path, exist_ok=True)
         index_file = os.path.join(self.index_path, "index.faiss")
         metadata_file = os.path.join(self.index_path, "metadata.pkl")
         
