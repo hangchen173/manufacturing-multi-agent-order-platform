@@ -8,6 +8,8 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from core.agents.base_agent import BaseAgent
 from core.models import ParsedOrder
+from core.constants import ModelType
+from core.exceptions import ParserException
 from config import Config
 
 class ParserScenario(str, Enum):
@@ -16,8 +18,8 @@ class ParserScenario(str, Enum):
     IMAGE_OCR = "image_ocr"
 
 class ParserAgent(BaseAgent):
-    def __init__(self, llm=None, scenario: ParserScenario = ParserScenario.GENERAL_PARSING):
-        super().__init__(llm)
+    def __init__(self, llm=None, scenario: ParserScenario = ParserScenario.GENERAL_PARSING, config: Optional[Config] = None):
+        super().__init__(llm, config)
         self.scenario = scenario
         self.parser = PydanticOutputParser(pydantic_object=ParsedOrder)
         
@@ -26,17 +28,17 @@ class ParserAgent(BaseAgent):
     
     def _get_llm_for_scenario(self, scenario: ParserScenario) -> ChatOpenAI:
         model_map = {
-            ParserScenario.LOGIC_DECISION: self.config.QWEN_MODEL_MAX,
-            ParserScenario.GENERAL_PARSING: self.config.QWEN_MODEL_PLUS,
-            ParserScenario.IMAGE_OCR: self.config.QWEN_MODEL_VL
+            ParserScenario.LOGIC_DECISION: self.config.model.max_model,
+            ParserScenario.GENERAL_PARSING: self.config.model.plus_model,
+            ParserScenario.IMAGE_OCR: self.config.model.vl_model,
         }
         
-        model = model_map.get(scenario, self.config.QWEN_MODEL_PLUS)
+        model = model_map.get(scenario, self.config.model.plus_model)
         
         return ChatOpenAI(
             model=model,
-            api_key=self.config.QWEN_API_KEY,
-            base_url=self.config.QWEN_BASE_URL,
+            api_key=self.config.model.api_key,
+            base_url=self.config.model.base_url,
             temperature=0,
             max_tokens=4096
         )
@@ -103,7 +105,7 @@ class ParserAgent(BaseAgent):
     def _process_text(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         order_text = input_data.get("order_text", "")
         if not order_text:
-            raise ValueError("订单文本不能为空")
+            raise ParserException("订单文本不能为空", agent_name=self.name)
         
         prompt = self._create_text_prompt()
         chain = prompt | self.llm | self.parser
@@ -124,10 +126,10 @@ class ParserAgent(BaseAgent):
     def _process_image(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         image_path = input_data.get("image_path", "")
         if not image_path:
-            raise ValueError("图片路径不能为空")
+            raise ParserException("图片路径不能为空", agent_name=self.name)
         
         if not Path(image_path).exists():
-            raise ValueError(f"图片文件不存在: {image_path}")
+            raise ParserException(f"图片文件不存在: {image_path}", agent_name=self.name)
         
         image_type = input_data.get("image_type", "jpeg")
         format_instructions = self.parser.get_format_instructions()
