@@ -18,33 +18,37 @@
 
 ```
 AGENT_project/
-├── app.py                          # Flask 应用主入口
+├── app.py                          # Flask 启动壳
 ├── config.py                       # 配置管理
-├── core/
+├── application/                    # 应用层
 │   ├── agents/                     # Agent 实现
-│   │   ├── base_agent.py              # Agent 基类
-│   │   ├── parser_agent.py            # Parser Agent (解析智能体)
-│   │   ├── matching_agent.py          # Matching Agent (匹配智能体)
-│   │   └── risk_control_agent.py      # Risk Control Agent (风控智能体)
+│   ├── orchestrators/              # 用例编排
+│   ├── pipeline/                   # Stage 抽象
+│   ├── services/                   # 应用服务
+│   └── container.py                # 依赖注入
+├── domain/                         # 领域层
 │   ├── models.py                   # Pydantic 数据模型
-│   ├── utils/                      # 核心工具
-│   │   └── order_manager.py            # 订单状态管理
-│   └── orchestrator.py             # Agent 协作编排器
+│   ├── constants.py                # 常量
+│   ├── exceptions.py               # 异常定义
+│   └── order_state_machine.py      # 状态机规则
+├── infrastructure/                 # 基础设施层
+│   ├── document_processing/        # 文档加载
+│   ├── repositories/               # 订单仓储
+│   └── vector_store/               # 向量检索
+├── interfaces/                     # 交互层
+│   ├── http/                       # Flask API
+│   └── ui/                         # Streamlit UI
 ├── data/
 │   ├── faiss_index/                # FAISS 索引存储
+│   ├── orders/                     # 活动订单与归档订单
 │   ├── sample_orders/              # 示例订单存储
-│   └── standard_materials/         # 标准物料库
-│       └── sample_materials.json       # 示例物料数据
+│   └── standard_materials/         # 标准物料示例
+│       └── sample_materials.json   # 示例物料数据
 ├── scripts/                        # 工具脚本
-│   ├── init_faiss_index.py            # 初始化 FAISS 索引
-│   ├── test_agents.py                 # Agent 测试
-│   ├── test_orchestrator.py           # 编排器测试
-│   └── test_api.py                    # API 测试
-├── utils/
-│   ├── data_processing/            # 文档处理
-│   │   └── document_loader.py          # 文档加载器
-│   └── vector_store/               # 向量存储
-│       └── faiss_manager.py            # FAISS 管理
+│   ├── bootstrap/                    # 初始化脚本
+│   ├── tests/                        # 测试脚本
+│   ├── dev/                          # 开发辅助脚本
+│   └── README.md                     # 使用说明
 ├── .env                            # 环境变量
 ├── .env.example                    # 环境变量示例
 ├── .gitignore
@@ -58,19 +62,19 @@ AGENT_project/
 ### 1. Multi-Agent 系统
 
 #### Parser Agent (解析智能体)
-- 位置: `core/agents/parser_agent.py`
+- 位置: `application/agents/parser_agent.py`
 - 功能: 从订单文本中提取结构化信息
 - 技术: LangChain Prompt + Deepseek API + Pydantic Output Parser
 - 输出: `ParsedOrder` 模型
 
 #### Matching Agent (匹配智能体)
-- 位置: `core/agents/matching_agent.py`
+- 位置: `application/agents/matching_agent.py`
 - 功能: 将非标物料映射到标准 SKU
 - 技术: FAISS 语义向量检索 + Sentence-Transformers
 - 输出: `MatchedOrder` 模型
 
 #### Risk Control Agent (风控智能体)
-- 位置: `core/agents/risk_control_agent.py`
+- 位置: `application/agents/risk_control_agent.py`
 - 功能: 检测异常逻辑
 - 检测项:
   - 解析置信度过低 (< 0.8)
@@ -83,12 +87,12 @@ AGENT_project/
 ### 2. 编排与状态管理
 
 #### 订单状态管理
-- 位置: `core/utils/order_manager.py`
+- 位置: `application/services/order_manager.py`
 - 状态流转: PENDING → PARSING → MATCHING → RISK_CHECKING → COMPLETED/NEEDS_CONFIRMATION
 - 支持: 状态查询、数据持久化、确认请求管理
 
 #### Agent 协作编排器
-- 位置: `core/orchestrator.py`
+- 位置: `application/orchestrators/order_processing.py`
 - 功能: 完整的订单处理流程编排
 - 支持: 文档输入/纯文本输入、多轮反问触发、确认/拒绝操作
 
@@ -114,19 +118,19 @@ pip install -r requirements.txt
 
 ### 3. 初始化 FAISS 索引
 ```bash
-python3 scripts/init_faiss_index.py
+python3 scripts/bootstrap/init_faiss_index.py
 ```
 
 ### 4. 运行测试
 ```bash
 # 测试 Agent
-python3 scripts/test_agents.py
+python3 scripts/tests/test_agents.py
 
 # 测试编排器
-python3 scripts/test_orchestrator.py
+python3 scripts/tests/test_orchestrator.py
 
 # 测试 API
-python3 scripts/test_api.py
+python3 scripts/tests/test_api.py
 ```
 
 ### 5. 启动服务
@@ -155,7 +159,7 @@ python3 app.py
 
 ## 数据模型
 
-所有数据模型定义在 `core/models.py` 中：
+所有数据模型定义在 `domain/models.py` 中：
 - `OrderStatus`: 订单状态枚举
 - `OrderItem`, `ParsedOrder`: 解析结果
 - `MatchedOrderItem`, `MatchedOrder`: 匹配结果

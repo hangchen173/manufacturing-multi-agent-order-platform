@@ -1,13 +1,20 @@
 import os
 from typing import Optional
-from dataclasses import dataclass, field
-from dotenv import load_dotenv
+from dataclasses import dataclass
+
+from domain.exceptions import ConfigurationException
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - graceful fallback for minimal runtime environments
+    def load_dotenv():
+        return False
 
 load_dotenv()
 
 @dataclass
 class ModelConfig:
-    api_key: str
+    api_key: Optional[str]
     base_url: str
     max_model: str
     plus_model: str
@@ -24,6 +31,9 @@ class DataConfig:
     data_dir: str
     faiss_index_path: str
     standard_materials_path: str
+    sample_orders_path: str
+    order_store_path: str
+    order_archive_path: str
 
 @dataclass
 class RiskConfig:
@@ -33,17 +43,9 @@ class RiskConfig:
     timeout: int
 
 class Config:
-    _instance: Optional['Config'] = None
-    
-    def __new__(cls) -> 'Config':
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialize()
-        return cls._instance
-    
-    def _initialize(self):
+    def __init__(self):
         self.model = ModelConfig(
-            api_key=self._get_env("QWEN_API_KEY", required=True),
+            api_key=self._get_env("QWEN_API_KEY"),
             base_url=self._get_env("QWEN_BASE_URL", default="https://dashscope.aliyuncs.com/compatible-mode/v1"),
             max_model=self._get_env("QWEN_MODEL_MAX", default="qwen-max"),
             plus_model=self._get_env("QWEN_MODEL_PLUS", default="qwen-plus"),
@@ -52,14 +54,17 @@ class Config:
         
         self.server = ServerConfig(
             env=self._get_env("FLASK_ENV", default="development"),
-            debug=self._get_env("FLASK_DEBUG", default="1") == "1",
+            debug=self._get_bool_env("FLASK_DEBUG", default=True),
             port=int(self._get_env("FLASK_PORT", default="5001"))
         )
         
         self.data = DataConfig(
             data_dir=self._get_env("DATA_DIR", default="data"),
             faiss_index_path=self._get_env("FAISS_INDEX_PATH", default="data/faiss_index"),
-            standard_materials_path=self._get_env("STANDARD_MATERIALS_PATH", default="data/standard_materials")
+            standard_materials_path=self._get_env("STANDARD_MATERIALS_PATH", default="data/standard_materials.csv"),
+            sample_orders_path=self._get_env("SAMPLE_ORDERS_PATH", default="data/sample_orders"),
+            order_store_path=self._get_env("ORDER_STORE_PATH", default="data/orders/orders.json"),
+            order_archive_path=self._get_env("ORDER_ARCHIVE_PATH", default="data/orders/orders.archive.json")
         )
         
         self.risk = RiskConfig(
@@ -70,6 +75,7 @@ class Config:
         )
         
         self.hf_endpoint = self._get_env("HF_ENDPOINT", default="https://huggingface.co")
+        self.order_auto_archive_days = int(self._get_env("ORDER_AUTO_ARCHIVE_DAYS", default="30"))
     
     @staticmethod
     def _get_env(key: str, default: Optional[str] = None, required: bool = False) -> str:
@@ -77,6 +83,18 @@ class Config:
         if required and not value:
             raise ValueError(f"Required environment variable '{key}' is not set")
         return value
+
+    @staticmethod
+    def _get_bool_env(key: str, default: bool = False) -> bool:
+        value = os.getenv(key)
+        if value is None:
+            return default
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+
+    def require_model_api_key(self) -> str:
+        if not self.model.api_key:
+            raise ConfigurationException("QWEN_API_KEY 未配置，无法初始化模型客户端")
+        return self.model.api_key
     
     @property
     def QWEN_API_KEY(self) -> str:
@@ -121,6 +139,22 @@ class Config:
     @property
     def STANDARD_MATERIALS_PATH(self) -> str:
         return self.data.standard_materials_path
+
+    @property
+    def SAMPLE_ORDERS_PATH(self) -> str:
+        return self.data.sample_orders_path
+
+    @property
+    def ORDER_STORE_PATH(self) -> str:
+        return self.data.order_store_path
+
+    @property
+    def ORDER_ARCHIVE_PATH(self) -> str:
+        return self.data.order_archive_path
+
+    @property
+    def ORDER_AUTO_ARCHIVE_DAYS(self) -> int:
+        return self.order_auto_archive_days
     
     @property
     def RISK_CONFIDENCE_THRESHOLD(self) -> float:

@@ -1,0 +1,3 @@
+document_id,source_type,document_type,quality_tag,file_name,annotation_file,notes
+order_0001,self_built,purchase_order,clear_pdf,order_0001.pdf,order_0001.json,baseline sample
+order_0002,self_built,purchase_order,scan_blur,order_0002.jpg,order_0002.json,low resolution scan

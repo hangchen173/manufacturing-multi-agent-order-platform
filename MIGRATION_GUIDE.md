@@ -33,7 +33,7 @@ QWEN_MODEL_PLUS = os.getenv("QWEN_MODEL_PLUS", "qwen-plus")
 QWEN_MODEL_VL = os.getenv("QWEN_MODEL_VL", "qwen-vl-plus")
 ```
 
-### 2. Parser Agent 重构 (`core/agents/parser_agent.py`)
+### 2. Parser Agent 重构 (`application/agents/parser_agent.py`)
 
 **新增功能:**
 - `ParserScenario` 枚举：定义三种使用场景
@@ -43,7 +43,7 @@ QWEN_MODEL_VL = os.getenv("QWEN_MODEL_VL", "qwen-vl-plus")
 
 **使用示例:**
 ```python
-from core.agents.parser_agent import ParserAgent, ParserScenario
+from application.agents import ParserAgent, ParserScenario
 
 # 通用订单解析（默认）
 parser_general = ParserAgent(scenario=ParserScenario.GENERAL_PARSING)
@@ -59,7 +59,7 @@ result = parser_vl.run({
 })
 ```
 
-### 3. Orchestrator 更新 (`core/orchestrator.py`)
+### 3. Orchestrator 更新 (`application/orchestrators/order_processing.py`)
 
 **新增功能:**
 - 自动检测文档类型
@@ -110,10 +110,10 @@ pip install -r requirements.txt
 
 ```bash
 # 初始化 FAISS 索引
-python3 scripts/init_faiss_index.py
+python3 scripts/bootstrap/init_faiss_index.py
 
 # 测试 API
-python3 scripts/test_api.py
+python3 scripts/tests/test_api.py
 ```
 
 ## 模型选择策略

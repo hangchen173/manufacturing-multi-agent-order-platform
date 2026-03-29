@@ -120,38 +120,44 @@
 
 ```
 AGENT_project/
-├── app.py                      # Flask 应用主入口
-├── streamlit_app.py            # Streamlit 可视化演示
+├── app.py                      # Flask 启动壳
+├── streamlit_app.py            # Streamlit 启动壳
 ├── config.py                   # 配置文件
 ├── requirements.txt            # Python 依赖
 │
-├── core/
+├── application/                # 应用层: 编排、Agent、服务
 │   ├── agents/                 # Agent 实现
-│   │   ├── base_agent.py           # Agent 基类
-│   │   ├── parser_agent.py         # 解析智能体
-│   │   ├── matching_agent.py       # 匹配智能体
-│   │   └── risk_control_agent.py  # 风控智能体
-│   ├── models.py               # 数据模型 (Pydantic)
-│   ├── utils/                  # 核心工具
-│   │   └── order_manager.py       # 订单状态管理
-│   └── orchestrator.py         # Agent 协作编排器
+│   ├── orchestrators/          # 用例编排
+│   ├── pipeline/               # Pipeline Stage 抽象
+│   ├── services/               # 应用服务
+│   └── container.py            # 依赖注入容器
+│
+├── domain/                     # 领域层: 规则、模型、异常
+│   ├── constants.py
+│   ├── exceptions.py
+│   ├── models.py
+│   └── order_state_machine.py
+│
+├── infrastructure/             # 基础设施层
+│   ├── document_processing/    # 文档加载
+│   ├── repositories/           # 持久化仓储
+│   └── vector_store/           # 向量检索
+│
+├── interfaces/                 # 交互层
+│   ├── http/                   # Flask API
+│   └── ui/                     # Streamlit UI
 │
 ├── data/
 │   ├── standard_materials.csv  # 标准物料库 (CSV)
 │   ├── faiss_index/            # FAISS 向量索引
+│   ├── orders/                 # 订单持久化仓储
 │   └── sample_orders/          # 示例订单存储
 │
-├── utils/
-│   ├── data_processing/        # 文档处理工具
-│   │   └── document_loader.py      # PDF/Excel/图片加载
-│   └── vector_store/           # 向量存储工具
-│       └── faiss_manager.py        # FAISS 管理
-│
 ├── scripts/
-│   ├── init_faiss_index.py     # 初始化 FAISS 索引
-│   ├── test_agents.py          # Agent 测试
-│   ├── test_orchestrator.py    # 编排器测试
-│   └── test_api.py             # API 测试
+│   ├── bootstrap/              # 初始化脚本
+│   ├── tests/                  # 测试脚本
+│   ├── dev/                    # 开发辅助脚本
+│   └── README.md               # 脚本约定
 │
 ├── .env                        # 环境变量
 ├── .env.example                # 环境变量示例
@@ -198,7 +204,11 @@ RISK_CONFIDENCE_THRESHOLD=0.8
 # 路径配置
 DATA_DIR=data
 FAISS_INDEX_PATH=data/faiss_index
-STANDARD_MATERIALS_PATH=data/standard_materials
+STANDARD_MATERIALS_PATH=data/standard_materials.csv
+SAMPLE_ORDERS_PATH=data/sample_orders
+ORDER_STORE_PATH=data/orders/orders.json
+ORDER_ARCHIVE_PATH=data/orders/orders.archive.json
+ORDER_AUTO_ARCHIVE_DAYS=30
 ```
 
 ### 3. 准备标准物料库
@@ -214,7 +224,7 @@ STANDARD_MATERIALS_PATH=data/standard_materials
 ### 4. 初始化 FAISS 向量索引
 
 ```bash
-python3 scripts/init_faiss_index.py
+python3 scripts/bootstrap/init_faiss_index.py
 ```
 
 ### 5. 启动服务
