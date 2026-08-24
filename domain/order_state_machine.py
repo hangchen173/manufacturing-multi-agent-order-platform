@@ -32,9 +32,8 @@ def can_transition(current_status: Optional[OrderStatus], target_status: OrderSt
 def validate_transition(
     current_status: Optional[OrderStatus],
     target_status: OrderStatus,
-    force: bool = False,
 ) -> None:
-    if force or can_transition(current_status, target_status):
+    if can_transition(current_status, target_status):
         return
 
     expected_statuses = sorted(

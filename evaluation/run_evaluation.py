@@ -22,7 +22,6 @@ from domain.constants import (
     SUPPORTED_PDF_EXTENSIONS,
 )
 from evaluation.metrics import EvaluationAccumulator, build_summary_markdown
-from infrastructure.repositories import JsonOrderRepository
 from interfaces.http.serializers import to_jsonable
 
 
@@ -150,11 +149,7 @@ def build_run_directory(base_output_dir: Path, dataset_name: str) -> Path:
 
 def create_evaluation_orchestrator(run_dir: Path) -> OrderProcessingOrchestrator:
     config = Config()
-    repository = JsonOrderRepository(
-        store_path=str(run_dir / "evaluation_orders.json"),
-        archive_path=str(run_dir / "evaluation_orders.archive.json"),
-    )
-    order_manager = OrderManager(repository=repository, config=config)
+    order_manager = OrderManager(config=config)
     return OrderProcessingOrchestrator(order_manager=order_manager, config=config)
 
 

@@ -8,7 +8,7 @@ from config import Config
 from domain.exceptions import InvalidOrderStatusException, OrderNotFoundException
 from domain.models import FinalOrderResult, MatchedOrder, OrderStatus, ParsedOrder, RiskCheckResult
 from domain.order_state_machine import validate_transition
-from infrastructure.repositories import JsonOrderRepository, OrderRepository
+from infrastructure.repositories import OrderRepository, PostgresOrderRepository
 
 ModelT = TypeVar("ModelT")
 
@@ -131,14 +131,7 @@ class OrderProcessingContext:
         )
 
         if not context.transition_history:
-            context.transition_history.append(
-                OrderStatusTransition(
-                    from_status=None,
-                    to_status=context.status,
-                    timestamp=context.created_at,
-                    reason="hydrated_without_history",
-                )
-            )
+            raise ValueError(f"订单 {context.order_id} 缺少状态流转记录")
 
         return context
 
@@ -151,23 +144,17 @@ class OrderManager:
     ):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config = config or Config()
-        self.repository = repository or JsonOrderRepository(
-            self.config.ORDER_STORE_PATH,
-            self.config.ORDER_ARCHIVE_PATH,
-        )
+        self.repository = repository or PostgresOrderRepository(self.config.database.url)
         self.orders: Dict[str, OrderProcessingContext] = self._load_orders()
-        if self.config.ORDER_AUTO_ARCHIVE_DAYS > 0:
-            self.archive_terminal_orders(self.config.ORDER_AUTO_ARCHIVE_DAYS)
+        if self.config.data.order_auto_archive_days > 0:
+            self.archive_terminal_orders(self.config.data.order_auto_archive_days)
 
     def _load_orders(self) -> Dict[str, OrderProcessingContext]:
         snapshots = self.repository.load_all(archived=False)
         orders: Dict[str, OrderProcessingContext] = {}
 
         for order_id, snapshot in snapshots.items():
-            try:
-                orders[order_id] = OrderProcessingContext.from_snapshot(snapshot)
-            except Exception as exc:
-                self.logger.warning("跳过无法恢复的订单 %s: %s", order_id, exc)
+            orders[order_id] = OrderProcessingContext.from_snapshot(snapshot)
 
         return orders
 
@@ -229,12 +216,11 @@ class OrderManager:
         order_id: str,
         status: OrderStatus,
         reason: Optional[str] = None,
-        force: bool = False,
     ) -> bool:
         try:
             context = self._validate_order_exists(order_id)
             try:
-                validate_transition(context.status, status, force=force)
+                validate_transition(context.status, status)
             except InvalidOrderStatusException as exc:
                 raise InvalidOrderStatusException(
                     order_id=order_id,
@@ -372,6 +358,20 @@ class OrderManager:
             "has_final_result": order.final_result is not None,
             "transition_history": [item.to_dict() for item in order.transition_history],
         }
+
+    def get_order_detail(self, order_id: str) -> Optional[Dict[str, Any]]:
+        order = self.get_order(order_id)
+        if not order:
+            return None
+        return order.to_snapshot()
+
+    def list_order_summaries(self) -> List[Dict[str, Any]]:
+        return [
+            context.to_dict()
+            for context in sorted(
+                self.orders.values(), key=lambda context: context.created_at, reverse=True
+            )
+        ]
 
     def get_all_orders(self) -> Dict[str, OrderProcessingContext]:
         return self.orders.copy()

@@ -51,7 +51,11 @@ class AgentPipelineStage:
 
         payload = result.get(self.payload_key)
         if self.persist_callback is not None:
-            self.persist_callback(order_id, payload)
+            persisted = self.persist_callback(order_id, payload)
+            if not persisted:
+                message = f"{self.name} 阶段结果持久化失败"
+                order_manager.set_error(order_id, message)
+                return StageExecutionResult(success=False, message=message)
 
         return StageExecutionResult(
             success=True,

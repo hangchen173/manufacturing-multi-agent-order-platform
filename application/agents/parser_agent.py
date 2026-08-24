@@ -9,7 +9,6 @@ from domain.exceptions import ParserException
 from domain.models import ParsedOrder
 
 class ParserScenario(str, Enum):
-    LOGIC_DECISION = "logic_decision"
     GENERAL_PARSING = "general_parsing"
     IMAGE_OCR = "image_ocr"
 
@@ -30,7 +29,6 @@ class ParserAgent(BaseAgent):
         from langchain_openai import ChatOpenAI
 
         model_map = {
-            ParserScenario.LOGIC_DECISION: self.config.model.max_model,
             ParserScenario.GENERAL_PARSING: self.config.model.plus_model,
             ParserScenario.IMAGE_OCR: self.config.model.vl_model,
         }

@@ -3,7 +3,11 @@ import logging
 from pathlib import Path
 from typing import Optional, Tuple, List
 
-from domain.constants import SUPPORTED_DOCUMENT_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS
+from domain.constants import (
+    SUPPORTED_DOCUMENT_EXTENSIONS,
+    SUPPORTED_IMAGE_EXTENSIONS,
+    SUPPORTED_TEXT_EXTENSIONS,
+)
 from domain.exceptions import DocumentLoadException
 
 class DocumentLoader:
@@ -21,6 +25,8 @@ class DocumentLoader:
                 return self._load_pdf(file_path), 'pdf'
             elif file_ext in ['.xlsx', '.xls']:
                 return self._load_excel(file_path), 'excel'
+            elif file_ext in SUPPORTED_TEXT_EXTENSIONS:
+                return self._load_text(file_path), 'text'
             elif file_ext in SUPPORTED_IMAGE_EXTENSIONS:
                 return file_path, 'image'
             else:
@@ -94,6 +100,22 @@ class DocumentLoader:
                 f"Excel文件读取失败: {str(e)}",
                 details={"file_path": file_path, "error": str(e)}
             )
+
+    def _load_text(self, file_path: str) -> str:
+        self.logger.info("加载文本文件: %s", file_path)
+        try:
+            with open(file_path, "r", encoding="utf-8-sig") as file:
+                return file.read()
+        except UnicodeDecodeError as exc:
+            raise DocumentLoadException(
+                "文本文件必须使用 UTF-8 编码",
+                details={"file_path": file_path, "error": str(exc)},
+            ) from exc
+        except OSError as exc:
+            raise DocumentLoadException(
+                f"文本文件读取失败: {exc}",
+                details={"file_path": file_path, "error": str(exc)},
+            ) from exc
     
     def validate_file(self, file_path: str) -> bool:
         if not os.path.exists(file_path):

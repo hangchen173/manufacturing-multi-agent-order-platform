@@ -17,7 +17,6 @@ class OrderProcessingOrchestrator:
         config: Optional[Config] = None,
         document_loader: Optional[DocumentLoader] = None,
         parser_agent_general: Optional[ParserAgent] = None,
-        parser_agent_logic: Optional[ParserAgent] = None,
         parser_agent_vl: Optional[ParserAgent] = None,
         matching_agent: Optional[MatchingAgent] = None,
         risk_agent: Optional[RiskControlAgent] = None,
@@ -28,10 +27,6 @@ class OrderProcessingOrchestrator:
         
         self.parser_agent_general = parser_agent_general or ParserAgent(
             scenario=ParserScenario.GENERAL_PARSING,
-            config=self.config,
-        )
-        self.parser_agent_logic = parser_agent_logic or ParserAgent(
-            scenario=ParserScenario.LOGIC_DECISION,
             config=self.config,
         )
         self.parser_agent_vl = parser_agent_vl or ParserAgent(
@@ -310,3 +305,9 @@ class OrderProcessingOrchestrator:
     
     def get_order_status(self, order_id: str) -> Optional[Dict[str, Any]]:
         return self.order_manager.get_order_status(order_id)
+
+    def get_order_detail(self, order_id: str) -> Optional[Dict[str, Any]]:
+        return self.order_manager.get_order_detail(order_id)
+
+    def list_orders(self) -> list[Dict[str, Any]]:
+        return self.order_manager.list_order_summaries()

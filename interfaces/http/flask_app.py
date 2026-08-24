@@ -3,14 +3,12 @@ import uuid
 from typing import Optional
 
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 from application.container import ApplicationContainer
 from config import Config
 from domain.constants import SUPPORTED_DOCUMENT_EXTENSIONS, SUPPORTED_IMAGE_EXTENSIONS
 from interfaces.http.serializers import to_jsonable
-
 
 SUPPORTED_UPLOAD_EXTENSIONS = {
     extension.lstrip(".")
@@ -28,11 +26,8 @@ def create_app(
 ) -> Flask:
     config = config or Config()
     container = container or ApplicationContainer(config=config)
-
     app = Flask(__name__)
-    CORS(app)
-
-    upload_folder = config.SAMPLE_ORDERS_PATH
+    upload_folder = os.path.join(config.data.data_dir, "uploads")
     os.makedirs(upload_folder, exist_ok=True)
 
     app.config["UPLOAD_FOLDER"] = upload_folder
@@ -68,7 +63,7 @@ def create_app(
 
         result = container.orchestrator.process_order_from_document(filepath)
         status_code = 200 if result.get("success") else 400
-        return jsonify(to_jsonable(result)), status_code
+        return jsonify({"success": result.get("success", False), "data": to_jsonable(result)}), status_code
 
     @app.route("/api/upload_text", methods=["POST"])
     def upload_order_text():
@@ -80,16 +75,20 @@ def create_app(
 
         result = container.orchestrator.process_order_from_text(order_text)
         status_code = 200 if result.get("success") else 400
-        return jsonify(to_jsonable(result)), status_code
+        return jsonify({"success": result.get("success", False), "data": to_jsonable(result)}), status_code
 
-    @app.route("/api/query_status/<order_id>", methods=["GET"])
-    def query_status(order_id: str):
-        status = container.orchestrator.get_order_status(order_id)
+    @app.route("/api/orders", methods=["GET"])
+    def list_orders():
+        return jsonify({"success": True, "data": to_jsonable(container.orchestrator.list_orders())})
 
-        if not status:
+    @app.route("/api/orders/<order_id>", methods=["GET"])
+    def get_order(order_id: str):
+        order = container.orchestrator.get_order_detail(order_id)
+
+        if not order:
             return jsonify({"success": False, "message": "Order not found"}), 404
 
-        return jsonify({"success": True, "data": to_jsonable(status)})
+        return jsonify({"success": True, "data": to_jsonable(order)})
 
     @app.route("/api/confirm/<order_id>", methods=["POST"])
     def confirm_order(order_id: str):
@@ -106,7 +105,7 @@ def create_app(
 
         result = container.orchestrator.confirm_order(order_id, {"action": action})
         status_code = 200 if result.get("success") else 400
-        return jsonify(to_jsonable(result)), status_code
+        return jsonify({"success": result.get("success", False), "data": to_jsonable(result)}), status_code
 
     @app.errorhandler(404)
     def not_found(_error):
@@ -125,9 +124,9 @@ app = create_app()
 
 if __name__ == "__main__":
     runtime_config = Config()
-    print(f"Starting server on http://localhost:{runtime_config.FLASK_PORT}")
+    print(f"Starting server on http://localhost:{runtime_config.server.port}")
     app.run(
         host="0.0.0.0",
-        port=runtime_config.FLASK_PORT,
-        debug=runtime_config.FLASK_DEBUG,
+        port=runtime_config.server.port,
+        debug=runtime_config.server.debug,
     )

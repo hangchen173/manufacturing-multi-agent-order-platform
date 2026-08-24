@@ -15,9 +15,9 @@ def main():
     
     print("正在初始化 FAISS 向量索引...")
     
-    faiss_manager = FAISSManager(index_path=config.FAISS_INDEX_PATH)
+    faiss_manager = FAISSManager(index_path=config.data.faiss_index_path)
     
-    materials_file = config.STANDARD_MATERIALS_PATH
+    materials_file = config.data.standard_materials_path
     
     if os.path.exists(materials_file):
         materials = []

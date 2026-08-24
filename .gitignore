@@ -34,3 +34,12 @@ venv.bak/
 *.jpg
 *.jpeg
 .DS_Store
+
+# Node / Vite build artifacts
+node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts

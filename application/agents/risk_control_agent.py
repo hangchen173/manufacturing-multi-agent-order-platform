@@ -17,7 +17,7 @@ class RiskControlAgent(BaseAgent):
     
     def _check_parsing_confidence(self, item: Any, item_index: int) -> List[RiskIssue]:
         issues = []
-        if item.confidence_score and item.confidence_score < self.confidence_threshold:
+        if item.confidence_score is not None and item.confidence_score < self.confidence_threshold:
             issues.append(RiskIssue(
                 item_index=item_index,
                 issue_type=IssueType.LOW_CONFIDENCE.value,
