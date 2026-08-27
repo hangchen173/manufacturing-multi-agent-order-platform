@@ -128,9 +128,10 @@ class EvaluationAccumulator:
 
         expected_order_level = annotation.get("order_level", {})
         for field_name in ORDER_LEVEL_FIELDS:
-            expected_value = expected_order_level.get(field_name)
-            predicted_value = predicted_parsed.get(field_name)
-            self.order_field_counters[field_name].add(values_match(expected_value, predicted_value))
+            if field_name in expected_order_level:
+                expected_value = expected_order_level[field_name]
+                predicted_value = predicted_parsed.get(field_name)
+                self.order_field_counters[field_name].add(values_match(expected_value, predicted_value))
 
         expected_items = annotation.get("items", [])
         self.item_count_exact_counter.add(len(expected_items) == len(predicted_items))
@@ -158,9 +159,10 @@ class EvaluationAccumulator:
             }
 
             for field_name in ITEM_LEVEL_FIELDS:
-                self.item_field_counters[field_name].add(
-                    values_match(expected_field_map[field_name], predicted_field_map[field_name])
-                )
+                if field_name in expected_item:
+                    self.item_field_counters[field_name].add(
+                        values_match(expected_field_map[field_name], predicted_field_map[field_name])
+                    )
 
             golden_sku = expected_item.get("golden_sku_code")
             if golden_sku not in (None, ""):
