@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orders}
+      POSTGRES_USER: ${POSTGRES_USER:-orders}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orders} -d ${POSTGRES_DB:-orders}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    platform: linux/amd64
+    build:
+      context: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-orders}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-orders}
+      FLASK_PORT: 5001
+      FLASK_DEBUG: "false"
+      DATA_DIR: data
+      FAISS_INDEX_PATH: data/faiss_index
+      STANDARD_MATERIALS_PATH: data/standard_materials.csv
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/api/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

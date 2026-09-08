@@ -1,0 +1,39 @@
+# Secrets and local environments
+.env
+.venv/
+venv/
+env/
+
+# Python and build artifacts
+__pycache__/
+*.py[cod]
+*.so
+build/
+dist/
+*.egg-info/
+
+# Generated indexes, uploads, and local runtime data
+data/faiss_index/
+data/sample_orders/
+data/uploads/
+*.faiss
+*.pkl
+
+# Public benchmark source files and generated evaluation assets
+datasets/public/**/raw/
+datasets/public/**/processed/
+datasets/self_built/
+datasets/shared/
+!datasets/README.md
+!datasets/public/.gitkeep
+
+# Frontend artifacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+
+# OS and editor files
+.DS_Store
+.vscode/

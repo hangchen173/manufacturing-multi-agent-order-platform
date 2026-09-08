@@ -1,0 +1,32 @@
+{
+  "document_id": "order_0001",
+  "source_type": "self_built",
+  "document_type": "purchase_order",
+  "file_path": "data/sample_orders/order_0001.pdf",
+  "quality_tag": [
+    "clear_pdf"
+  ],
+  "order_level": {
+    "order_number": "PO-2026-0001",
+    "customer_name": "ANON_CUSTOMER_A",
+    "currency": "CNY",
+    "total_amount": 12500.0
+  },
+  "items": [
+    {
+      "line_index": 1,
+      "material_name_raw": "不锈钢螺丝",
+      "specification_raw": "M8x30",
+      "quantity": 1000,
+      "unit": "个",
+      "unit_price": 0.5,
+      "delivery_date": "2026-04-15",
+      "golden_sku_code": "SKU-001",
+      "risk_expected": false
+    }
+  ],
+  "business_decision": {
+    "action": "auto_approve",
+    "reason": null
+  }
+}
