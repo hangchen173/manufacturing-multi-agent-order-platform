@@ -7,7 +7,13 @@ from application.pipeline import AgentPipelineStage
 from application.services import OrderManager
 from config import Config
 from domain.constants import SUPPORTED_IMAGE_EXTENSIONS
-from domain.models import FinalOrderResult, OrderStatus
+from domain.models import (
+    BusinessAction,
+    BusinessDecision,
+    FinalOrderResult,
+    MatchedOrderItem,
+    OrderStatus,
+)
 from infrastructure.document_processing import DocumentLoader
 
 class OrderProcessingOrchestrator:
@@ -145,7 +151,12 @@ class OrderProcessingOrchestrator:
             return self._build_error_response(parser_result.message, order_id)
 
         parsed_order = parser_result.payload
-        
+
+        if not parsed_order.items:
+            message = "未从订单中解析出任何物料明细，已拒绝处理"
+            self.order_manager.set_error(order_id, message)
+            return self._build_error_response(message, order_id)
+
         return self._process_matching_phase(order_id, parsed_order)
     
     def _process_matching_phase(self, order_id: str, parsed_order: Any) -> Dict[str, Any]:
@@ -184,21 +195,20 @@ class OrderProcessingOrchestrator:
         matched_order: Any, 
         risk_check_result: Any
     ) -> Dict[str, Any]:
-        low_match_score = any(
-            item.match_score < self.config.risk.match_threshold
-            for item in matched_order.items 
-            if hasattr(item, 'match_score')
-        )
-        needs_confirmation = low_match_score or risk_check_result.needs_confirmation
+        if not matched_order.items:
+            message = "订单无有效物料明细，已拒绝处理"
+            self.order_manager.set_error(order_id, message)
+            return self._build_error_response(message, order_id)
+
+        needs_confirmation = risk_check_result.needs_confirmation
+        business_decision = self._decide_business_action(matched_order, needs_confirmation)
         
         final_status = OrderStatus.COMPLETED
         if needs_confirmation:
             final_status = OrderStatus.NEEDS_CONFIRMATION
             confirmation_request = self._create_confirmation_request(
                 order_id, 
-                risk_check_result, 
-                matched_order, 
-                low_match_score
+                risk_check_result
             )
             self.order_manager.add_confirmation_request(order_id, confirmation_request)
         
@@ -214,6 +224,7 @@ class OrderProcessingOrchestrator:
             parsed_order=order.parsed_order,
             matched_order=matched_order,
             risk_result=risk_check_result,
+            business_decision=business_decision,
             message="订单处理完成"
         )
         self.order_manager.update_final_result(order_id, final_result)
@@ -222,16 +233,44 @@ class OrderProcessingOrchestrator:
             "success": True,
             "order_id": order_id,
             "final_result": final_result,
+            "business_decision": business_decision,
             "needs_confirmation": needs_confirmation,
             "message": "订单处理完成"
         }
     
+    def _decide_business_action(
+        self, matched_order: Any, needs_confirmation: bool
+    ) -> BusinessDecision:
+        if needs_confirmation:
+            return BusinessDecision(
+                action=BusinessAction.MANUAL_REVIEW,
+                reason="风控发现高风险明细项，需人工确认",
+            )
+        
+        normalized_count = sum(
+            1 for item in matched_order.items if self._needs_normalization(item)
+        )
+        if normalized_count:
+            return BusinessDecision(
+                action=BusinessAction.AUTO_CORRECT,
+                reason=f"{normalized_count} 行明细按标准物料库完成归一化，未发现风险",
+            )
+        
+        return BusinessDecision(
+            action=BusinessAction.AUTO_APPROVE,
+            reason="全部明细与标准物料库一致，未发现风险",
+        )
+    
+    @staticmethod
+    def _needs_normalization(item: MatchedOrderItem) -> bool:
+        if not item.matched_material_name:
+            return False
+        return (item.material_name or "").strip().lower() != item.matched_material_name.strip().lower()
+    
     def _create_confirmation_request(
         self, 
         order_id: str, 
-        risk_result: Any, 
-        matched_order: Any = None, 
-        low_match_score: bool = False
+        risk_result: Any
     ) -> Dict[str, Any]:
         issues_summary = [
             {
@@ -244,8 +283,6 @@ class OrderProcessingOrchestrator:
         ]
         
         reasons = []
-        if low_match_score:
-            reasons.append(f"部分物料匹配得分低于 {self.config.risk.match_threshold:.1f}")
         if risk_result.issues:
             reasons.append(f"发现 {len(risk_result.issues)} 个风险问题")
         
@@ -255,7 +292,6 @@ class OrderProcessingOrchestrator:
             "overall_confidence": risk_result.overall_confidence,
             "issues": issues_summary,
             "needs_confirmation_reasons": reasons,
-            "low_match_score": low_match_score,
             "timestamp": datetime.now().isoformat(),
             "required_actions": ["review_issues", "confirm_or_reject"]
         }

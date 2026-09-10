@@ -1,7 +1,11 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
+from langchain_core.messages import AIMessage
+
+from application.agents.parser_agent import ParserAgent
 from application.agents.risk_control_agent import RiskControlAgent
 from application.pipeline.stages import AgentPipelineStage
 from application.services import OrderManager, OrderProcessingContext
@@ -9,6 +13,38 @@ from config import Config
 from domain.models import MatchedOrderItem, OrderStatus
 from infrastructure.document_processing.document_loader import DocumentLoader
 from tests.fakes import InMemoryOrderRepository
+
+
+def _order_payload(specification):
+    return {
+        "order_number": "PO-1",
+        "customer_name": "客户01",
+        "items": [
+            {
+                "material_name": "螺丝",
+                "specification": specification,
+                "quantity": 10,
+                "unit": "个",
+                "unit_price": 1.0,
+            }
+        ],
+        "total_amount": None,
+        "parsing_confidence": 0.95,
+    }
+
+
+def _build_parser_agent(*payloads):
+    responses = iter(payloads)
+    prompts = []
+
+    def fake_llm(prompt_value):
+        prompts.append(prompt_value)
+        return AIMessage(content=json.dumps(next(responses)))
+
+    return ParserAgent(llm=fake_llm, config=Config()), prompts
+
+
+ORDER_TEXT = "1 螺丝 M8 10 个 1.0 10.0"
 
 
 class CoreBehaviorTests(unittest.TestCase):
@@ -87,6 +123,87 @@ class CoreBehaviorTests(unittest.TestCase):
 
         self.assertFalse(updated)
         self.assertEqual(manager.get_order(order_id).status, OrderStatus.PENDING)
+
+    def test_parser_skips_self_correction_when_extraction_is_clean(self):
+        agent, prompts = _build_parser_agent(_order_payload("M8"))
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        self.assertTrue(result["success"])
+        self.assertEqual(len(prompts), 1)
+        self.assertIsNone(agent.last_self_correction)
+
+    def test_parser_retries_once_and_records_the_resolved_problem(self):
+        agent, prompts = _build_parser_agent(
+            _order_payload(""),
+            _order_payload("M8"),
+        )
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        self.assertEqual(len(prompts), 2)
+        self.assertEqual(result["parsed_order"].items[0].specification, "M8")
+        self.assertEqual(agent.last_self_correction["attempts"], 2)
+        self.assertTrue(agent.last_self_correction["resolved"])
+        self.assertEqual(len(agent.last_self_correction["initial_problems"]), 1)
+        self.assertEqual(agent.last_self_correction["remaining_problems"], [])
+
+    def test_parser_flags_unresolved_problems_for_manual_review(self):
+        agent, prompts = _build_parser_agent(
+            _order_payload(""),
+            _order_payload(""),
+        )
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        self.assertEqual(len(prompts), ParserAgent.MAX_PARSING_ATTEMPTS)
+        self.assertFalse(agent.last_self_correction["resolved"])
+        self.assertEqual(len(agent.last_self_correction["remaining_problems"]), 1)
+
+        parsed_order = result["parsed_order"]
+        self.assertLess(parsed_order.items[0].confidence_score, Config().risk.confidence_threshold)
+        self.assertLess(parsed_order.parsing_confidence, Config().risk.confidence_threshold)
+
+    def test_parser_detects_row_count_mismatch(self):
+        agent, prompts = _build_parser_agent(
+            _order_payload("M8"),
+            _order_payload("M8"),
+        )
+
+        agent.run({"order_text": "1 螺丝 M8 10 个 1.0 10.0\n2 螺母 M8 5 个 2.0 10.0"})
+
+        self.assertEqual(len(prompts), 2)
+        self.assertTrue(
+            any("明细数量不一致" in problem for problem in agent.last_self_correction["remaining_problems"])
+        )
+
+    def test_parser_recovers_from_schema_validation_failure(self):
+        agent, prompts = _build_parser_agent(
+            _order_payload(None),
+            _order_payload("M8"),
+        )
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        self.assertTrue(result["success"])
+        self.assertEqual(len(prompts), 2)
+        self.assertEqual(result["parsed_order"].items[0].specification, "M8")
+        self.assertTrue(agent.last_self_correction["resolved"])
+        self.assertTrue(
+            any("结构校验" in problem for problem in agent.last_self_correction["initial_problems"])
+        )
+
+    def test_parser_fails_when_schema_validation_never_recovers(self):
+        agent, prompts = _build_parser_agent(
+            _order_payload(None),
+            _order_payload(None),
+        )
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        self.assertFalse(result["success"])
+        self.assertIn("结构校验", result["message"])
+        self.assertEqual(len(prompts), ParserAgent.MAX_PARSING_ATTEMPTS)
 
 
 if __name__ == "__main__":

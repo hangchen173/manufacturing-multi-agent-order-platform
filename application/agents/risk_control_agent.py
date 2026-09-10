@@ -5,15 +5,22 @@ from config import Config
 from domain.constants import (
     SeverityLevel, 
     IssueType, 
+    LINE_TOTAL_TOLERANCE,
+    PACK_QUANTITY_MULTIPLE,
     PRICE_ABNORMALITY_RATIO_HIGH,
-    PRICE_ABNORMALITY_RATIO_LOW
+    PRICE_ABNORMALITY_RATIO_LOW,
+    PRICE_POLICY_RATIO_MAX
 )
 from domain.models import MatchedOrder, RiskCheckResult, RiskIssue
+
+ORDER_LEVEL_ITEM_INDEX = -1
 
 class RiskControlAgent(BaseAgent):
     def __init__(self, llm=None, config: Optional[Config] = None):
         super().__init__(llm, config)
         self.confidence_threshold = self.config.risk.confidence_threshold
+        self.match_threshold = self.config.risk.match_threshold
+        self.evaluation_as_of = self.config.risk.evaluation_as_of
     
     def _check_parsing_confidence(self, item: Any, item_index: int) -> List[RiskIssue]:
         issues = []
@@ -26,16 +33,85 @@ class RiskControlAgent(BaseAgent):
             ))
         return issues
     
-    def _check_match_score(self, item: Any, item_index: int) -> List[RiskIssue]:
-        issues = []
-        if hasattr(item, 'match_score') and item.match_score < self.confidence_threshold:
-            issues.append(RiskIssue(
-                item_index=item_index,
-                issue_type=IssueType.LOW_MATCH_SCORE.value,
-                description=f"物料匹配得分 {item.match_score:.2f} 低于阈值 {self.confidence_threshold}",
-                severity=SeverityLevel.MEDIUM.value
-            ))
-        return issues
+    def _check_unknown_material(self, item: Any, item_index: int) -> List[RiskIssue]:
+        if getattr(item, 'sku_code', None) and item.match_score >= self.match_threshold:
+            return []
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.UNKNOWN_MATERIAL.value,
+            description=(
+                f"物料 '{item.material_name}' 未能可靠匹配标准物料库，"
+                f"匹配得分 {item.match_score:.2f}"
+            ),
+            severity=SeverityLevel.HIGH.value
+        )]
+
+    def _check_ambiguous_specification(self, item: Any, item_index: int) -> List[RiskIssue]:
+        if (item.specification or "").strip():
+            return []
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.AMBIGUOUS_MISSING_SPECIFICATION.value,
+            description=f"物料 '{item.material_name}' 缺少规格型号，无法唯一定位标准物料",
+            severity=SeverityLevel.HIGH.value
+        )]
+
+    def _check_non_pack_quantity(self, item: Any, item_index: int) -> List[RiskIssue]:
+        if item.quantity is None or item.quantity <= 0:
+            return []
+        if item.quantity % PACK_QUANTITY_MULTIPLE == 0:
+            return []
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.NON_PACK_QUANTITY.value,
+            description=f"数量 {item.quantity} 不是包装数量 {PACK_QUANTITY_MULTIPLE} 的整数倍",
+            severity=SeverityLevel.HIGH.value
+        )]
+
+    def _check_price_policy(
+        self,
+        item: Any,
+        item_index: int,
+        reference_price: Optional[float] = None
+    ) -> List[RiskIssue]:
+        if item.unit_price is None or not reference_price or reference_price <= 0:
+            return []
+        if getattr(item, 'match_score', 0.0) < self.match_threshold:
+            return []
+
+        price_ratio = item.unit_price / reference_price
+        if price_ratio <= PRICE_POLICY_RATIO_MAX:
+            return []
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.PRICE_OUT_OF_POLICY.value,
+            description=(
+                f"单价 {item.unit_price} 为参考价 {reference_price} 的 {price_ratio:.2f} 倍，"
+                f"超过 {PRICE_POLICY_RATIO_MAX} 倍上限"
+            ),
+            severity=SeverityLevel.HIGH.value
+        )]
+
+    def _check_line_total(self, matched_order: MatchedOrder) -> List[RiskIssue]:
+        total_amount = getattr(matched_order, "total_amount", None)
+        if total_amount is None:
+            return []
+
+        computed_total = sum(
+            float(item.quantity or 0) * float(item.unit_price or 0)
+            for item in matched_order.items
+        )
+        if abs(computed_total - total_amount) <= LINE_TOTAL_TOLERANCE:
+            return []
+        return [RiskIssue(
+            item_index=ORDER_LEVEL_ITEM_INDEX,
+            issue_type=IssueType.LINE_TOTAL_MISMATCH.value,
+            description=(
+                f"明细金额合计 {computed_total:.2f} 与订单总额 "
+                f"{total_amount:.2f} 不一致"
+            ),
+            severity=SeverityLevel.HIGH.value
+        )]
     
     def _check_price_abnormality(
         self, 
@@ -69,6 +145,11 @@ class RiskControlAgent(BaseAgent):
         
         return issues
     
+    def _reference_time(self) -> datetime:
+        if self.evaluation_as_of:
+            return datetime.strptime(self.evaluation_as_of, "%Y-%m-%d")
+        return datetime.now()
+
     def _check_delivery_date(self, item: Any, item_index: int) -> List[RiskIssue]:
         issues = []
         
@@ -77,11 +158,11 @@ class RiskControlAgent(BaseAgent):
         
         try:
             delivery_date = datetime.strptime(item.delivery_date, "%Y-%m-%d")
-            if delivery_date < datetime.now():
+            if delivery_date < self._reference_time():
                 issues.append(RiskIssue(
                     item_index=item_index,
                     issue_type=IssueType.PAST_DELIVERY.value,
-                    description=f"交期 {item.delivery_date} 已过",
+                    description=f"交期 {item.delivery_date} 早于评估时点 {self._reference_time():%Y-%m-%d}",
                     severity=SeverityLevel.HIGH.value
                 ))
         except ValueError:
@@ -107,7 +188,7 @@ class RiskControlAgent(BaseAgent):
     
     def _calculate_overall_confidence(self, issues: List[RiskIssue], item_count: int) -> float:
         if item_count == 0:
-            return 1.0
+            return 0.0
         
         high_severity_count = sum(1 for issue in issues if issue.severity == SeverityLevel.HIGH.value)
         medium_severity_count = sum(1 for issue in issues if issue.severity == SeverityLevel.MEDIUM.value)
@@ -118,8 +199,11 @@ class RiskControlAgent(BaseAgent):
     def _validate_item(self, item: Any, item_index: int, reference_price: Optional[float] = None) -> List[RiskIssue]:
         all_issues = []
         all_issues.extend(self._check_parsing_confidence(item, item_index))
-        all_issues.extend(self._check_match_score(item, item_index))
+        all_issues.extend(self._check_unknown_material(item, item_index))
+        all_issues.extend(self._check_ambiguous_specification(item, item_index))
+        all_issues.extend(self._check_non_pack_quantity(item, item_index))
         all_issues.extend(self._check_price_abnormality(item, item_index, reference_price))
+        all_issues.extend(self._check_price_policy(item, item_index, reference_price))
         all_issues.extend(self._check_delivery_date(item, item_index))
         all_issues.extend(self._check_quantity(item, item_index))
         return all_issues
@@ -133,6 +217,18 @@ class RiskControlAgent(BaseAgent):
             matched_order: MatchedOrder = input_data.get("matched_order")
             reference_prices: Dict[int, float] = input_data.get("reference_prices", {})
             
+            if not matched_order.items:
+                self.log_info("订单无有效明细，直接标记为需要人工确认")
+                return {
+                    "success": True,
+                    "risk_result": RiskCheckResult(
+                        needs_confirmation=True,
+                        issues=[],
+                        overall_confidence=0.0
+                    ),
+                    "message": "订单无有效物料明细，需人工确认"
+                }
+            
             all_issues: List[RiskIssue] = []
             
             for idx, item in enumerate(matched_order.items):
@@ -140,14 +236,15 @@ class RiskControlAgent(BaseAgent):
                 item_issues = self._validate_item(item, idx, reference_price)
                 all_issues.extend(item_issues)
             
+            all_issues.extend(self._check_line_total(matched_order))
+            
             overall_confidence = self._calculate_overall_confidence(
                 all_issues, 
                 len(matched_order.items)
             )
             
-            needs_confirmation = (
-                len(all_issues) > 0 or 
-                overall_confidence < self.confidence_threshold
+            needs_confirmation = any(
+                issue.severity == SeverityLevel.HIGH.value for issue in all_issues
             )
             
             risk_result = RiskCheckResult(
