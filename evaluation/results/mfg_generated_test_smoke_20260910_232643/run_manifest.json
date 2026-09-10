@@ -1,0 +1,23 @@
+{
+  "dataset_name": "mfg_generated_test_smoke",
+  "input_dir": "/Users/cmh/Documents/AGENT_project/datasets/generated_complex/orders/test",
+  "annotation_dir": "/Users/cmh/Documents/AGENT_project/datasets/generated_complex/annotations/test",
+  "manifest_csv": null,
+  "sample_count": 3,
+  "generated_at": "2026-09-10T23:30:45.555342",
+  "run_dir": "/Users/cmh/Documents/AGENT_project/evaluation/results/mfg_generated_test_smoke_20260910_232643",
+  "code_version": "00f4656b96536b96c1dd2ce3bbc23c9a53a5cedd",
+  "artifacts": {
+    "master_data_version": "91ac7537b9bdddf447f72516bc81c121ade430adcfc974fa1c7e10f25e35a158",
+    "index_version": "a38925540706a8ece55d20f48ba3d0794d4649cc6e2d410222637e0f73e2eeb3",
+    "standard_materials_sha256": "91ac7537b9bdddf447f72516bc81c121ade430adcfc974fa1c7e10f25e35a158",
+    "faiss_index_sha256": "f30b96e32b8fd23259bf6f646f1befcbe947821538bd6dc75103bd56ceecf5f5",
+    "faiss_metadata_sha256": "a38925540706a8ece55d20f48ba3d0794d4649cc6e2d410222637e0f73e2eeb3",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "model_config": {
+      "model": "qwen3.7-plus",
+      "match_threshold": 0.8,
+      "confidence_threshold": 0.8
+    }
+  }
+}

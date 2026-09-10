@@ -1,0 +1,83 @@
+{
+  "total_samples": 3,
+  "success_count": 3,
+  "failure_count": 0,
+  "success_rate": 1.0,
+  "annotated_samples": 3,
+  "needs_confirmation_count": 3,
+  "needs_confirmation_rate": 1.0,
+  "avg_latency_ms": 80777.56726400064,
+  "avg_parsed_items": 27.666666666666668,
+  "avg_matched_items": 27.666666666666668,
+  "avg_risk_issues": 3.0,
+  "order_level_accuracy": {
+    "order_number": {
+      "matched": 3,
+      "total": 3,
+      "accuracy": 1.0
+    },
+    "customer_name": {
+      "matched": 3,
+      "total": 3,
+      "accuracy": 1.0
+    },
+    "total_amount": {
+      "matched": 3,
+      "total": 3,
+      "accuracy": 1.0
+    }
+  },
+  "item_level_accuracy": {
+    "material_name_raw": {
+      "matched": 83,
+      "total": 83,
+      "accuracy": 1.0
+    },
+    "specification_raw": {
+      "matched": 83,
+      "total": 83,
+      "accuracy": 1.0
+    },
+    "quantity": {
+      "matched": 83,
+      "total": 83,
+      "accuracy": 1.0
+    },
+    "unit": {
+      "matched": 83,
+      "total": 83,
+      "accuracy": 1.0
+    },
+    "unit_price": {
+      "matched": 83,
+      "total": 83,
+      "accuracy": 1.0
+    },
+    "delivery_date": {
+      "matched": 0,
+      "total": 0,
+      "accuracy": 0.0
+    }
+  },
+  "item_count_exact_match": {
+    "matched": 3,
+    "total": 3,
+    "accuracy": 1.0
+  },
+  "sku_top1_accuracy": {
+    "matched": 68,
+    "total": 83,
+    "accuracy": 0.8192771084337349
+  },
+  "confirmation_accuracy": {
+    "matched": 0,
+    "total": 3,
+    "accuracy": 0.0
+  },
+  "business_decision_accuracy": {
+    "matched": 0,
+    "total": 3,
+    "accuracy": 0.0
+  },
+  "error_auto_release_rate": 0.0
+}
