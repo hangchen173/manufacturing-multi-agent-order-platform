@@ -166,12 +166,13 @@ class EvaluationAccumulator:
                         values_match(expected_field_map[field_name], predicted_field_map[field_name])
                     )
 
-            golden_sku = expected_item.get("golden_sku_code")
-            self.sku_top1_counter.add(
-                values_match(golden_sku, predicted_item.get("sku_code"))
-                if golden_sku not in (None, "")
-                else predicted_item.get("sku_code") in (None, "")
-            )
+            if "golden_sku_code" in expected_item:
+                golden_sku = expected_item.get("golden_sku_code")
+                self.sku_top1_counter.add(
+                    values_match(golden_sku, predicted_item.get("sku_code"))
+                    if golden_sku not in (None, "")
+                    else predicted_item.get("sku_code") in (None, "")
+                )
 
         expected_decision = annotation.get("business_decision") or {}
         if expected_decision.get("action"):

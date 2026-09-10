@@ -37,6 +37,23 @@ class EvaluationContractTests(unittest.TestCase):
         )
         self.assertEqual(accumulator.to_dict()["sku_top1_accuracy"]["total"], 1)
 
+    def test_public_benchmark_annotation_without_decision_is_accepted(self):
+        annotation = normalize_annotation({
+            "document_id": "cord-1",
+            "order_level": {"total_amount": 60.0},
+            "items": [{"material_name_raw": "TICKET", "quantity": 2}],
+        })
+        accumulator = EvaluationAccumulator()
+        accumulator.record_sample(
+            success=True, latency_ms=1, needs_confirmation=True,
+            parsed_item_count=1, matched_item_count=1, risk_issue_count=0,
+            annotation=annotation,
+            prediction={"final_result": {"parsed_order": {"items": []}, "matched_order": {"items": []}}},
+        )
+        summary = accumulator.to_dict()
+        self.assertEqual(summary["business_decision_accuracy"]["total"], 0)
+        self.assertEqual(summary["sku_top1_accuracy"]["total"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
