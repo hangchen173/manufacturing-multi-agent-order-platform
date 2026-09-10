@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+from evaluation.contracts import predicted_action
 
 
 ORDER_LEVEL_FIELDS = [
@@ -89,6 +90,8 @@ class EvaluationAccumulator:
     sku_top1_counter: FieldCounter = field(default_factory=FieldCounter)
     confirmation_counter: FieldCounter = field(default_factory=FieldCounter)
     item_count_exact_counter: FieldCounter = field(default_factory=FieldCounter)
+    decision_counter: FieldCounter = field(default_factory=FieldCounter)
+    auto_release_counter: FieldCounter = field(default_factory=FieldCounter)
 
     def record_sample(
         self,
@@ -136,10 +139,9 @@ class EvaluationAccumulator:
         expected_items = annotation.get("items", [])
         self.item_count_exact_counter.add(len(expected_items) == len(predicted_items))
 
-        comparable_count = min(len(expected_items), len(predicted_items))
-        for index in range(comparable_count):
-            expected_item = expected_items[index]
-            predicted_item = predicted_items[index]
+        for index in range(max(len(expected_items), len(predicted_items))):
+            expected_item = expected_items[index] if index < len(expected_items) else {}
+            predicted_item = predicted_items[index] if index < len(predicted_items) else {}
 
             expected_field_map = {
                 "material_name_raw": expected_item.get("material_name_raw"),
@@ -165,15 +167,23 @@ class EvaluationAccumulator:
                     )
 
             golden_sku = expected_item.get("golden_sku_code")
-            if golden_sku not in (None, ""):
-                self.sku_top1_counter.add(values_match(golden_sku, predicted_item.get("sku_code")))
+            self.sku_top1_counter.add(
+                values_match(golden_sku, predicted_item.get("sku_code"))
+                if golden_sku not in (None, "")
+                else predicted_item.get("sku_code") in (None, "")
+            )
 
-        expected_confirmation = (
-            annotation.get("confirmation", {}) or {}
-        ).get("needs_manual_confirmation")
-        if expected_confirmation is not None:
+        expected_decision = annotation.get("business_decision") or {}
+        if expected_decision.get("action"):
+            actual_action = predicted_action(prediction)
+            self.decision_counter.add(expected_decision["action"] == actual_action)
             self.confirmation_counter.add(
-                bool(expected_confirmation) == bool(prediction.get("needs_confirmation"))
+                (expected_decision["action"] == "manual_review")
+                == (actual_action == "manual_review")
+            )
+            self.auto_release_counter.add(
+                expected_decision["action"] != "manual_review"
+                or actual_action == "manual_review"
             )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -200,6 +210,11 @@ class EvaluationAccumulator:
             "item_count_exact_match": self.item_count_exact_counter.to_dict(),
             "sku_top1_accuracy": self.sku_top1_counter.to_dict(),
             "confirmation_accuracy": self.confirmation_counter.to_dict(),
+            "business_decision_accuracy": self.decision_counter.to_dict(),
+            "error_auto_release_rate": safe_divide(
+                self.auto_release_counter.total - self.auto_release_counter.matched,
+                self.auto_release_counter.total,
+            ),
         }
         return summary
 
@@ -271,6 +286,12 @@ def build_summary_markdown(
                 f"{summary['confirmation_accuracy']['total']} "
                 f"({summary['confirmation_accuracy']['accuracy']:.2%})"
             ),
+            (
+                f"- Business decision accuracy: {summary['business_decision_accuracy']['matched']}/"
+                f"{summary['business_decision_accuracy']['total']} "
+                f"({summary['business_decision_accuracy']['accuracy']:.2%})"
+            ),
+            f"- Error auto-release rate: {summary['error_auto_release_rate']:.2%}",
             "",
             "## Failures",
             "",

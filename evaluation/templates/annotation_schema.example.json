@@ -25,8 +25,8 @@
       "risk_expected": false
     }
   ],
-  "confirmation": {
-    "needs_manual_confirmation": false,
-    "manual_confirmation_reason": null
+  "business_decision": {
+    "action": "auto_approve",
+    "reason": null
   }
 }
