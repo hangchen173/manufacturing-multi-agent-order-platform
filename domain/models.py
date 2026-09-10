@@ -49,9 +49,19 @@ class RiskCheckResult(BaseModel):
     issues: List[RiskIssue] = Field(default_factory=list, description="风险问题列表")
     overall_confidence: float = Field(description="整体风控置信度")
 
+class BusinessAction(str, Enum):
+    AUTO_APPROVE = "auto_approve"
+    AUTO_CORRECT = "auto_correct"
+    MANUAL_REVIEW = "manual_review"
+
+class BusinessDecision(BaseModel):
+    action: BusinessAction = Field(description="最终动作")
+    reason: str = Field(description="决策依据")
+
 class FinalOrderResult(BaseModel):
     status: OrderStatus = Field(description="订单处理状态")
     parsed_order: Optional[ParsedOrder] = Field(None, description="解析结果")
     matched_order: Optional[MatchedOrder] = Field(None, description="匹配结果")
     risk_result: Optional[RiskCheckResult] = Field(None, description="风控结果")
+    business_decision: Optional[BusinessDecision] = Field(None, description="最终动作")
     message: Optional[str] = Field(None, description="处理信息")

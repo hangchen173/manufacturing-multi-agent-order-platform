@@ -11,8 +11,7 @@ load_dotenv()
 class ModelConfig:
     api_key: Optional[str]
     base_url: str
-    plus_model: str
-    vl_model: str
+    model: str
 
 @dataclass
 class ServerConfig:
@@ -34,14 +33,14 @@ class DatabaseConfig:
 class RiskConfig:
     confidence_threshold: float
     match_threshold: float
+    evaluation_as_of: Optional[str]
 
 class Config:
     def __init__(self):
         self.model = ModelConfig(
             api_key=self._get_env("QWEN_API_KEY"),
             base_url=self._get_env("QWEN_BASE_URL", default="https://dashscope.aliyuncs.com/compatible-mode/v1"),
-            plus_model=self._get_env("QWEN_MODEL_PLUS", default="qwen-plus"),
-            vl_model=self._get_env("QWEN_MODEL_VL", default="qwen-vl-plus")
+            model=self._get_env("QWEN_MODEL", default="qwen3.7-plus")
         )
         
         self.server = ServerConfig(
@@ -62,6 +61,7 @@ class Config:
         self.risk = RiskConfig(
             confidence_threshold=float(self._get_env("RISK_CONFIDENCE_THRESHOLD", default="0.8")),
             match_threshold=float(self._get_env("RISK_MATCH_THRESHOLD", default="0.8")),
+            evaluation_as_of=self._get_env("RISK_EVALUATION_AS_OF"),
         )
     
     @staticmethod
