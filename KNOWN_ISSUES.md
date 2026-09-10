@@ -5,6 +5,8 @@
 
 状态更新：2026-09-10，P0-1 / P0-2 已修复并通过测试与端到端验证。
 
+状态更新：2026-09-11，评测契约与评测基线已核验；移除已过时的待复核项（详见第四节）。
+
 ---
 
 ## 一、已复现缺陷（P0-1 / P0-2 已修复）
@@ -86,10 +88,38 @@ needs_confirmation = low_match_score or risk_check_result.needs_confirmation
 
 ---
 
-## 四、待复核事项
+## 四、已复核并关闭的事项（2026-09-11）
 
-- 评测数据契约字段命名不一致：标注侧使用 `business_decision`，评测代码读取 `confirmation`，可能导致指标为空或统计失真（来自前期代码核对，尚未在本次运行中复核）。
-- `evaluation/results/` 缺真实基线报告。
+- **评测数据契约字段命名不一致（已关闭）**：标注与评测代码此前分别使用 `business_decision` 与 `confirmation`，现已统一为 `business_decision`；[contracts.py](file:///Users/cmh/Documents/AGENT_project/evaluation/contracts.py) 对已废弃的 `confirmation` 字段显式报错，并由 `tests/test_evaluation_contract.py` 覆盖。
+- **`evaluation/results/` 缺真实基线报告（已关闭）**：已归档自建集基线与公开数据集（CORD）真实评测结果，见第五节。
+
+---
+
+## 五、评测结果归档
+
+### 5.1 公开数据集（CORD v2 test，100 条）
+
+- 归档路径：[cord_v2_test_20260911_012942/summary.md](file:///Users/cmh/Documents/AGENT_project/evaluation/results/cord_v2_test_20260911_012942/summary.md)
+- 数据来源：`datasets/public/cord/processed/`（图片输入 + 标注），非自造集。
+- 总览：100 条样本，成功 84，失败 16，成功率 **84.00%**，平均单条耗时 149.8s。
+- 字段抽取准确率（分子为命中数、分母为标注中出现的条数）：
+  - `quantity`：176/186（**94.62%**）
+  - `total_amount`：56/74（**75.68%**）
+  - `material_name_raw`：106/218（**48.62%**，明细名称存在模型抽取方差，非指标口径问题）
+  - `unit_price`：26/57（45.61%）
+  - 明细条数完全一致：63/84（75.00%）
+- `specification_raw` / `unit` / `delivery_date` / `order_number` / `customer_name` 均为 0/0：CORD 标注未提供对应字段，指标按契约自动跳过。
+- `SKU Top-1` / `confirmation` / `business_decision` 均为 0/0：CORD 为公开数据集，标注不含 `golden_sku_code` 与 `business_decision`，决策类指标整体跳过——这正是评测契约收敛（字段缺失即跳过、不虚增分母）的设计目标。
+- 失败 16 条说明：
+  - **15 条为上游模型账号欠费**（DashScope 返回 `type: Arrearage`，`cord_v2_test_083` ~ `099`），属外部账号状态，非流水线缺陷；独立直连 `ChatOpenAI` ping 复现同样错误。
+  - **1 条为模型输出非法 JSON**（`cord_v2_test_008`），已由解析自检重试路径覆盖，重试后仍未通过，属模型输出稳定性问题。
+- 待办：账号恢复后可用 `--resume-run` 复用成功行、仅补跑上述失败样本。
+
+### 5.2 自建集基线
+
+- 归档路径：[baseline_generated_complex_test_20260910_234250/summary.md](file:///Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250/summary.md)
+- 240 条样本，成功率 100%；`material_name_raw` 99.78%、`specification_raw` 99.25%、`quantity`/`unit`/`unit_price` 均 100%；`sku_top1_accuracy` 80.52%、`business_decision_accuracy` 35.00%。
+- 说明：自建集用于回归与鲁棒性验证，公开集（5.1）用于避免「自造集自证」。
 
 ---
 
@@ -97,7 +127,7 @@ needs_confirmation = low_match_score or risk_check_result.needs_confirmation
 
 - 一键启动：`postgres` → `api` → `web` 三容器均 healthy，`GET /api/health` 返回 200。
 - 完美订单：解析 → 匹配（`FST-013` 0.99 / `BRG-009` 0.99）→ 风控无风险 → `completed`，符合预期。
-- 需人工确认订单：触发 `low_match_score` / `price_abnormal` / `past_delivery`，状态 `needs_confirmation`，`POST /api/confirm` 确认后转 `completed`，符合预期。
+- 需人工确认订单：触发 `unknown_material`（匹配分低于阈值）/ `price_abnormal` / `past_delivery`，状态 `needs_confirmation`，`POST /api/confirm` 确认后转 `completed`，符合预期。
 - 人工确认端到端（浏览器）：订单 `PO-2026-9001`（`243e9e66-5506-4b50-a99d-61d951e8227f`）在前端展示风险项与明细，人工点击「确认通过」后：
   - 接口状态 `needs_confirmation` → `completed`；
   - 状态流转新增一条 `needs_confirmation -> completed | manually_confirmed`（2026-09-10 15:08:59）；

@@ -1,0 +1,27 @@
+{
+  "dataset_name": "cord_v2_test",
+  "input_dir": "/Users/cmh/Documents/AGENT_project/datasets/public/cord/processed/images",
+  "annotation_dir": "/Users/cmh/Documents/AGENT_project/datasets/public/cord/processed/annotations",
+  "manifest_csv": "/Users/cmh/Documents/AGENT_project/evaluation/manifests/cord_v2_test_manifest.csv",
+  "sample_count": 100,
+  "evaluated_this_run": 100,
+  "resumed": false,
+  "concurrency": 6,
+  "generated_at": "2026-09-11T02:12:10.705207",
+  "run_dir": "/Users/cmh/Documents/AGENT_project/evaluation/results/cord_v2_test_20260911_012942",
+  "code_version": "d22ab4f843bcd366ba620decad092e8f245fef76",
+  "artifacts": {
+    "master_data_version": "91ac7537b9bdddf447f72516bc81c121ade430adcfc974fa1c7e10f25e35a158",
+    "index_version": "a38925540706a8ece55d20f48ba3d0794d4649cc6e2d410222637e0f73e2eeb3",
+    "standard_materials_sha256": "91ac7537b9bdddf447f72516bc81c121ade430adcfc974fa1c7e10f25e35a158",
+    "faiss_index_sha256": "f30b96e32b8fd23259bf6f646f1befcbe947821538bd6dc75103bd56ceecf5f5",
+    "faiss_metadata_sha256": "a38925540706a8ece55d20f48ba3d0794d4649cc6e2d410222637e0f73e2eeb3",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "model_config": {
+      "model": "qwen3.7-plus",
+      "match_threshold": 0.8,
+      "confidence_threshold": 0.8,
+      "evaluation_as_of": null
+    }
+  }
+}
