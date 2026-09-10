@@ -7,6 +7,8 @@
 
 状态更新：2026-09-11，评测契约与评测基线已核验；移除已过时的待复核项（详见第四节）。
 
+状态更新：2026-09-11，CORD 公开集补跑完成，100/100 成功（原 16 条外部原因失败全部消解，详见第五节）。
+
 ---
 
 ## 一、已复现缺陷（P0-1 / P0-2 已修复）
@@ -101,19 +103,17 @@ needs_confirmation = low_match_score or risk_check_result.needs_confirmation
 
 - 归档路径：[cord_v2_test_20260911_012942/summary.md](file:///Users/cmh/Documents/AGENT_project/evaluation/results/cord_v2_test_20260911_012942/summary.md)
 - 数据来源：`datasets/public/cord/processed/`（图片输入 + 标注），非自造集。
-- 总览：100 条样本，成功 84，失败 16，成功率 **84.00%**，平均单条耗时 149.8s。
+- 总览：100 条样本全部成功，成功率 **100%**，平均单条耗时 173.8s。
 - 字段抽取准确率（分子为命中数、分母为标注中出现的条数）：
-  - `quantity`：176/186（**94.62%**）
-  - `total_amount`：56/74（**75.68%**）
-  - `material_name_raw`：106/218（**48.62%**，明细名称存在模型抽取方差，非指标口径问题）
-  - `unit_price`：26/57（45.61%）
-  - 明细条数完全一致：63/84（75.00%）
+  - `quantity`：212/224（**94.64%**）
+  - `total_amount`：64/89（**71.91%**）
+  - `material_name_raw`：120/257（**46.69%**，明细名称存在模型抽取方差，非指标口径问题）
+  - `unit_price`：34/67（50.75%）
+  - 明细条数完全一致：73/100（73.00%）
+- `needs_confirmation_rate` 为 100%：CORD 票据商品不在本项目 SKU 主数据内，按设计全部转人工确认。
 - `specification_raw` / `unit` / `delivery_date` / `order_number` / `customer_name` 均为 0/0：CORD 标注未提供对应字段，指标按契约自动跳过。
 - `SKU Top-1` / `confirmation` / `business_decision` 均为 0/0：CORD 为公开数据集，标注不含 `golden_sku_code` 与 `business_decision`，决策类指标整体跳过——这正是评测契约收敛（字段缺失即跳过、不虚增分母）的设计目标。
-- 失败 16 条说明：
-  - **15 条为上游模型账号欠费**（DashScope 返回 `type: Arrearage`，`cord_v2_test_083` ~ `099`），属外部账号状态，非流水线缺陷；独立直连 `ChatOpenAI` ping 复现同样错误。
-  - **1 条为模型输出非法 JSON**（`cord_v2_test_008`），已由解析自检重试路径覆盖，重试后仍未通过，属模型输出稳定性问题。
-- 待办：账号恢复后可用 `--resume-run` 复用成功行、仅补跑上述失败样本。
+- 首跑曾因上游账号欠费中断 15 条（`cord_v2_test_083`~`099`，DashScope `type: Arrearage`）、另 1 条模型输出非法 JSON（`cord_v2_test_008`）；账号恢复后用 `--resume-run` 复用 84 条成功行、仅重跑 16 条，**16 条全部转成功**。结论：原失败均为外部账号状态与模型输出稳定性因素，非流水线缺陷。
 
 ### 5.2 自建集基线
 
