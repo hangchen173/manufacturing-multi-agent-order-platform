@@ -33,6 +33,13 @@ def _order_payload(specification):
     }
 
 
+def _schema_invalid_payload():
+    # material_name 仍为必填，置空可稳定触发 Pydantic 结构校验失败
+    payload = _order_payload("M8")
+    payload["items"][0]["material_name"] = None
+    return payload
+
+
 def _build_parser_agent(*payloads):
     responses = iter(payloads)
     prompts = []
@@ -179,7 +186,7 @@ class CoreBehaviorTests(unittest.TestCase):
 
     def test_parser_recovers_from_schema_validation_failure(self):
         agent, prompts = _build_parser_agent(
-            _order_payload(None),
+            _schema_invalid_payload(),
             _order_payload("M8"),
         )
 
@@ -195,8 +202,8 @@ class CoreBehaviorTests(unittest.TestCase):
 
     def test_parser_fails_when_schema_validation_never_recovers(self):
         agent, prompts = _build_parser_agent(
-            _order_payload(None),
-            _order_payload(None),
+            _schema_invalid_payload(),
+            _schema_invalid_payload(),
         )
 
         result = agent.run({"order_text": ORDER_TEXT})

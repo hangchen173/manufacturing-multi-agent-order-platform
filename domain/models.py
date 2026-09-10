@@ -13,9 +13,9 @@ class OrderStatus(str, Enum):
 
 class OrderItem(BaseModel):
     material_name: str = Field(description="物料名称")
-    specification: str = Field(description="规格型号")
+    specification: Optional[str] = Field(None, description="规格型号")
     quantity: float = Field(description="数量")
-    unit: str = Field(description="单位")
+    unit: Optional[str] = Field(None, description="单位")
     unit_price: Optional[float] = Field(None, description="单价")
     delivery_date: Optional[str] = Field(None, description="交期")
     confidence_score: Optional[float] = Field(None, description="解析置信度")

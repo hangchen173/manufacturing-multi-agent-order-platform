@@ -180,7 +180,6 @@ class ParserAgent(BaseAgent):
     
     def _extract_image(self, image_path: str, image_type: str, feedback: Optional[str]) -> ParsedOrder:
         from langchain_core.messages import HumanMessage
-        from langchain_core.prompts import ChatPromptTemplate
 
         parser = self._get_output_parser()
         messages = [
@@ -192,11 +191,8 @@ class ParserAgent(BaseAgent):
         ]
         if feedback:
             messages.append(HumanMessage(content=_CORRECTION_INSTRUCTION.format(feedback=feedback)))
-        
-        prompt = ChatPromptTemplate.from_messages([("placeholder", "{messages}")])
-        chain = prompt | self._get_llm() | parser
-        
-        return chain.invoke({"messages": messages})
+
+        return (self._get_llm() | parser).invoke(messages)
     
     def _parse_with_self_correction(
         self,
