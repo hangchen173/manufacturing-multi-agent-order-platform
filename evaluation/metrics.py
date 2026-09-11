@@ -92,6 +92,15 @@ class EvaluationAccumulator:
     item_count_exact_counter: FieldCounter = field(default_factory=FieldCounter)
     decision_counter: FieldCounter = field(default_factory=FieldCounter)
     auto_release_counter: FieldCounter = field(default_factory=FieldCounter)
+    # 整单内容正确率：所有维度（订单字段、明细字段、行数、SKU）全部命中的样本。
+    content_exact_counter: FieldCounter = field(default_factory=FieldCounter)
+    content_exact_success_counter: FieldCounter = field(default_factory=FieldCounter)
+    # total = 被自动处理（非 manual_review）的样本，matched = 其中内容完全正确。
+    auto_release_content_counter: FieldCounter = field(default_factory=FieldCounter)
+    # total = 有动作标注的样本，matched = 预测为自动处理。
+    auto_handle_counter: FieldCounter = field(default_factory=FieldCounter)
+    # total = 金标需要人工复核的样本，matched = 预测也要求人工复核。
+    manual_review_recall_counter: FieldCounter = field(default_factory=FieldCounter)
 
     def record_sample(
         self,
@@ -119,25 +128,39 @@ class EvaluationAccumulator:
         if needs_confirmation:
             self.needs_confirmation_count += 1
 
-        if annotation and prediction:
+        if annotation:
             self.annotated_samples += 1
             self._record_annotated_metrics(annotation, prediction)
 
-    def _record_annotated_metrics(self, annotation: Dict[str, Any], prediction: Dict[str, Any]) -> None:
+    def _record_annotated_metrics(
+        self, annotation: Dict[str, Any], prediction: Optional[Dict[str, Any]]
+    ) -> None:
+        # 技术失败的样本没有预测结果：计入全样本内容正确率分母并记为不正确，
+        # 但不计入自动放行/自动处理等只在有动作结果时才成立的指标。
+        if prediction is None:
+            self.content_exact_counter.add(False)
+            return
+
         predicted_final = prediction.get("final_result") or {}
         predicted_parsed = predicted_final.get("parsed_order") or {}
         predicted_matched = predicted_final.get("matched_order") or {}
         predicted_items = predicted_matched.get("items") or predicted_parsed.get("items") or []
+
+        content_correct = True
 
         expected_order_level = annotation.get("order_level", {})
         for field_name in ORDER_LEVEL_FIELDS:
             if field_name in expected_order_level:
                 expected_value = expected_order_level[field_name]
                 predicted_value = predicted_parsed.get(field_name)
-                self.order_field_counters[field_name].add(values_match(expected_value, predicted_value))
+                matched = values_match(expected_value, predicted_value)
+                self.order_field_counters[field_name].add(matched)
+                content_correct = content_correct and matched
 
         expected_items = annotation.get("items", [])
-        self.item_count_exact_counter.add(len(expected_items) == len(predicted_items))
+        count_matched = len(expected_items) == len(predicted_items)
+        self.item_count_exact_counter.add(count_matched)
+        content_correct = content_correct and count_matched
 
         for index in range(max(len(expected_items), len(predicted_items))):
             expected_item = expected_items[index] if index < len(expected_items) else {}
@@ -162,30 +185,43 @@ class EvaluationAccumulator:
 
             for field_name in ITEM_LEVEL_FIELDS:
                 if field_name in expected_item:
-                    self.item_field_counters[field_name].add(
-                        values_match(expected_field_map[field_name], predicted_field_map[field_name])
+                    matched = values_match(
+                        expected_field_map[field_name], predicted_field_map[field_name]
                     )
+                    self.item_field_counters[field_name].add(matched)
+                    content_correct = content_correct and matched
 
             if "golden_sku_code" in expected_item:
                 golden_sku = expected_item.get("golden_sku_code")
-                self.sku_top1_counter.add(
+                sku_matched = (
                     values_match(golden_sku, predicted_item.get("sku_code"))
                     if golden_sku not in (None, "")
                     else predicted_item.get("sku_code") in (None, "")
                 )
+                self.sku_top1_counter.add(sku_matched)
+                content_correct = content_correct and sku_matched
+
+        self.content_exact_counter.add(content_correct)
+        self.content_exact_success_counter.add(content_correct)
+
+        actual_action = predicted_action(prediction)
+        is_auto = actual_action != "manual_review"
+        if is_auto:
+            self.auto_release_content_counter.add(content_correct)
 
         expected_decision = annotation.get("business_decision") or {}
         if expected_decision.get("action"):
-            actual_action = predicted_action(prediction)
-            self.decision_counter.add(expected_decision["action"] == actual_action)
+            expected_action = expected_decision["action"]
+            self.decision_counter.add(expected_action == actual_action)
             self.confirmation_counter.add(
-                (expected_decision["action"] == "manual_review")
-                == (actual_action == "manual_review")
+                (expected_action == "manual_review") == (actual_action == "manual_review")
             )
             self.auto_release_counter.add(
-                expected_decision["action"] != "manual_review"
-                or actual_action == "manual_review"
+                expected_action != "manual_review" or actual_action == "manual_review"
             )
+            self.auto_handle_counter.add(is_auto)
+            if expected_action == "manual_review":
+                self.manual_review_recall_counter.add(actual_action == "manual_review")
 
     def to_dict(self) -> Dict[str, Any]:
         summary = {
@@ -216,8 +252,48 @@ class EvaluationAccumulator:
                 self.auto_release_counter.total - self.auto_release_counter.matched,
                 self.auto_release_counter.total,
             ),
+            "content_exact_match": self.content_exact_counter.to_dict(),
+            "content_exact_match_success_only": self.content_exact_success_counter.to_dict(),
+            "auto_handle_coverage": self.auto_handle_counter.to_dict(),
+            "manual_review_recall": self.manual_review_recall_counter.to_dict(),
+            "error_auto_release": {
+                "error_count": (
+                    self.auto_release_counter.total - self.auto_release_counter.matched
+                ),
+                "decision_total": self.auto_release_counter.total,
+                "error_rate": safe_divide(
+                    self.auto_release_counter.total - self.auto_release_counter.matched,
+                    self.auto_release_counter.total,
+                ),
+            },
+            "auto_release_content_error": {
+                "error_count": (
+                    self.auto_release_content_counter.total
+                    - self.auto_release_content_counter.matched
+                ),
+                "auto_release_total": self.auto_release_content_counter.total,
+                "error_rate": safe_divide(
+                    self.auto_release_content_counter.total
+                    - self.auto_release_content_counter.matched,
+                    self.auto_release_content_counter.total,
+                ),
+            },
         }
         return summary
+
+
+def format_counter(counter: Dict[str, Any]) -> str:
+    """以 `命中/总量 (比率)` 呈现计数；分母为 0 时显示 N/A。"""
+    total = counter.get("total") or 0
+    if not total:
+        return "N/A (0/0)"
+    return f"{counter['matched']}/{total} ({counter['accuracy']:.2%})"
+
+
+def format_rate(numerator: float, denominator: float) -> str:
+    if not denominator:
+        return "N/A (0/0)"
+    return f"{int(numerator)}/{int(denominator)} ({safe_divide(numerator, denominator):.2%})"
 
 
 def build_summary_markdown(
@@ -227,7 +303,10 @@ def build_summary_markdown(
     annotation_dir: Optional[str],
     summary: Dict[str, Any],
     failures: List[Dict[str, Any]],
+    attempts: Optional[Dict[str, Any]] = None,
 ) -> str:
+    auto_release_error = summary["auto_release_content_error"]
+    error_auto_release = summary["error_auto_release"]
     lines = [
         f"# Evaluation Summary: {dataset_name}",
         "",
@@ -248,9 +327,7 @@ def build_summary_markdown(
     ]
 
     for field_name, result in summary["order_level_accuracy"].items():
-        lines.append(
-            f"- `{field_name}`: {result['matched']}/{result['total']} ({result['accuracy']:.2%})"
-        )
+        lines.append(f"- `{field_name}`: {format_counter(result)}")
 
     lines.extend(
         [
@@ -260,39 +337,88 @@ def build_summary_markdown(
         ]
     )
     for field_name, result in summary["item_level_accuracy"].items():
-        lines.append(
-            f"- `{field_name}`: {result['matched']}/{result['total']} ({result['accuracy']:.2%})"
-        )
+        lines.append(f"- `{field_name}`: {format_counter(result)}")
 
     lines.extend(
         [
             "",
             "## Extra Metrics",
             "",
+            f"- Item count exact match: {format_counter(summary['item_count_exact_match'])}",
+            f"- SKU Top-1 accuracy: {format_counter(summary['sku_top1_accuracy'])}",
+            f"- Confirmation accuracy: {format_counter(summary['confirmation_accuracy'])}",
             (
-                f"- Item count exact match: "
-                f"{summary['item_count_exact_match']['matched']}/"
-                f"{summary['item_count_exact_match']['total']} "
-                f"({summary['item_count_exact_match']['accuracy']:.2%})"
+                f"- Business decision accuracy: "
+                f"{format_counter(summary['business_decision_accuracy'])}"
             ),
             (
-                f"- SKU Top-1 accuracy: "
-                f"{summary['sku_top1_accuracy']['matched']}/"
-                f"{summary['sku_top1_accuracy']['total']} "
-                f"({summary['sku_top1_accuracy']['accuracy']:.2%})"
+                f"- Error auto-release rate: "
+                f"{format_rate(error_auto_release['error_count'], error_auto_release['decision_total'])}"
+            ),
+            "",
+            "## Content & Coverage Metrics",
+            "",
+            (
+                f"- Order content exact match (all samples): "
+                f"{format_counter(summary['content_exact_match'])}"
             ),
             (
-                f"- Confirmation accuracy: "
-                f"{summary['confirmation_accuracy']['matched']}/"
-                f"{summary['confirmation_accuracy']['total']} "
-                f"({summary['confirmation_accuracy']['accuracy']:.2%})"
+                f"- Order content exact match (success only): "
+                f"{format_counter(summary['content_exact_match_success_only'])}"
             ),
+            f"- Auto-handle coverage: {format_counter(summary['auto_handle_coverage'])}",
+            f"- Manual-review recall: {format_counter(summary['manual_review_recall'])}",
             (
-                f"- Business decision accuracy: {summary['business_decision_accuracy']['matched']}/"
-                f"{summary['business_decision_accuracy']['total']} "
-                f"({summary['business_decision_accuracy']['accuracy']:.2%})"
+                f"- Auto-release content-error rate: "
+                f"{format_rate(auto_release_error['error_count'], auto_release_error['auto_release_total'])}"
             ),
-            f"- Error auto-release rate: {summary['error_auto_release_rate']:.2%}",
+            "",
+            "## Scoring Rules",
+            "",
+            "- 行对齐：标签与预测按行序号一一对齐；标签有金标 SKU 而预测缺行时该行记为 SKU 错误。",
+            "- 额外行：预测行数多于标签时，多出的行参与字段与 SKU 比较，任一不符即计入错误。",
+            "- 漏行：标签行数多于预测时，缺失行按空预测参与比较，字段与 SKU 均记错。",
+            "- 内容正确：订单级字段、明细字段、行数与 SKU 全部命中才算整单内容正确。",
+            "- 口径：全样本指标（含技术失败）与技术成功后的条件指标分开展示；分母为 0 的指标显示 N/A。",
+            "- 技术失败不算自动放行，不计入自动放行相关指标的分母。",
+        ]
+    )
+
+    if attempts:
+        usage = attempts.get("total_usage") or {}
+        lines.extend(
+            [
+                "",
+                "## Attempts",
+                "",
+                f"- Documents: {attempts['total_documents']}",
+                f"- Total attempts: {attempts['total_attempts']}",
+                (
+                    f"- First-attempt success: {attempts['first_attempt_success_count']}/"
+                    f"{attempts['total_documents']} "
+                    f"({attempts['first_attempt_success_rate']:.2%})"
+                ),
+                (
+                    f"- Final success: {attempts['final_success_count']}/"
+                    f"{attempts['total_documents']} "
+                    f"({attempts['final_success_rate']:.2%})"
+                ),
+                (
+                    f"- Retried documents: {attempts['retried_documents']} "
+                    f"(recovered {attempts['retry_success_count']}, "
+                    f"{attempts['retry_success_rate']:.2%})"
+                ),
+                f"- Total latency: {attempts['total_latency_ms']:.2f} ms",
+                (
+                    f"- Total tokens: {int(usage.get('total_tokens', 0))} "
+                    f"(prompt {int(usage.get('prompt_tokens', 0))}, "
+                    f"completion {int(usage.get('completion_tokens', 0))})"
+                ),
+            ]
+        )
+
+    lines.extend(
+        [
             "",
             "## Failures",
             "",

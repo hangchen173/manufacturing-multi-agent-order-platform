@@ -24,6 +24,7 @@ def main():
         with open(materials_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
+                alias = (row.get('aliases') or '').strip()
                 materials.append({
                     'sku_code': row['sku_code'],
                     'material_name': row['material_name'],
@@ -31,6 +32,8 @@ def main():
                     'unit': row['unit'],
                     'reference_price': float(row['reference_price']),
                     'category': row['category'],
+                    # 别名参与名称兼容性判断，必须随索引一起持久化
+                    'aliases': [alias] if alias else [],
                     'text': f"{row['material_name']} {row['specification']} {row['category']}"
                 })
         

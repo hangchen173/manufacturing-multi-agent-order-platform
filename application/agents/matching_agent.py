@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from application.agents.base_agent import BaseAgent
 from config import Config
@@ -17,8 +17,9 @@ class MatchingAgent(BaseAgent):
         super().__init__(llm, config)
         self.match_threshold = self.config.risk.match_threshold
         self._faiss_manager = faiss_manager
-        self._name_spec_index: Optional[Dict[Tuple[str, str], Dict[str, Any]]] = None
+        self._name_spec_index: Optional[Dict[Tuple[str, str], List[Dict[str, Any]]]] = None
         self._spec_index: Optional[Dict[str, List[Dict[str, Any]]]] = None
+        self._row_name_keys: Optional[Dict[str, Set[str]]] = None
 
     @property
     def faiss_manager(self):
@@ -68,18 +69,43 @@ class MatchingAgent(BaseAgent):
         if self._name_spec_index is not None:
             return
 
-        name_spec_index: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        name_spec_index: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
         spec_index: Dict[str, List[Dict[str, Any]]] = {}
+        row_name_keys: Dict[str, Set[str]] = {}
         for row in self.faiss_manager.metadata:
             name_key = self._normalize_match_key(row.get("material_name"))
             spec_key = self._normalize_match_key(row.get("specification"))
+
+            # 标准名称与已登记别名共同构成名称兼容性依据
+            row_keys: Set[str] = set()
+            if name_key:
+                row_keys.add(name_key)
+            for alias in row.get("aliases") or []:
+                alias_key = self._normalize_match_key(alias)
+                if alias_key:
+                    row_keys.add(alias_key)
+            sku_code = row.get("sku_code")
+            if sku_code:
+                row_name_keys.setdefault(sku_code, set()).update(row_keys)
+
             if name_key and spec_key:
-                name_spec_index.setdefault((name_key, spec_key), row)
+                name_spec_index.setdefault((name_key, spec_key), []).append(row)
             if spec_key:
                 spec_index.setdefault(spec_key, []).append(row)
 
         self._name_spec_index = name_spec_index
         self._spec_index = spec_index
+        self._row_name_keys = row_name_keys
+
+    def _name_compatible(self, name_key: str, row: Dict[str, Any]) -> bool:
+        if not name_key:
+            return False
+        row_keys = None
+        if self._row_name_keys is not None:
+            row_keys = self._row_name_keys.get(row.get("sku_code"))
+        if not row_keys:
+            row_keys = {self._normalize_match_key(row.get("material_name"))}
+        return name_key in row_keys
 
     def _match_by_catalog_key(self, item: Any) -> Optional[Dict[str, Any]]:
         self._build_key_index()
@@ -87,20 +113,103 @@ class MatchingAgent(BaseAgent):
         name_key = self._normalize_match_key(item.material_name)
         spec_key = self._normalize_match_key(item.specification)
 
-        if name_key and spec_key:
-            row = self._name_spec_index.get((name_key, spec_key))
-            if row is not None:
-                return row
+        if not name_key or not spec_key:
+            return None
 
-        if spec_key:
-            candidates = self._spec_index.get(spec_key)
-            if candidates and len(candidates) == 1:
-                return candidates[0]
+        exact_rows = self._name_spec_index.get((name_key, spec_key), [])
+        if len(exact_rows) == 1:
+            return exact_rows[0]
+        if len(exact_rows) > 1:
+            # 完整名称与规格对应多个 SKU，显式歧义，不默认取第一条
+            return None
 
+        # 规格唯一但仍需名称（标准名或已登记别名）兼容才接受
+        compatible_rows = [
+            row
+            for row in self._spec_index.get(spec_key, [])
+            if self._name_compatible(name_key, row)
+        ]
+        if len(compatible_rows) == 1:
+            return compatible_rows[0]
         return None
 
+    def _catalog_basis(self, item: Any, row: Dict[str, Any]) -> str:
+        item_name_key = self._normalize_match_key(item.material_name)
+        canonical_key = self._normalize_match_key(row.get("material_name"))
+        if item_name_key == canonical_key:
+            return "catalog_name_spec_exact"
+        return "catalog_alias_spec_exact"
+
+    def _spec_conflict_reason(self, item: Any, candidate: Dict[str, Any]) -> str:
+        item_spec = self._normalize_match_key(item.specification)
+        candidate_spec = self._normalize_match_key(candidate.get("specification"))
+        sku_code = candidate.get("sku_code")
+        if item_spec and candidate_spec.startswith(item_spec):
+            return (
+                f"规格 '{item.specification}' 缺少区分候选 {sku_code}"
+                f"（{candidate.get('specification')}）的关键属性"
+            )
+        return (
+            f"规格 '{item.specification}' 与最高相似候选 {sku_code}"
+            f"（{candidate.get('specification')}）存在冲突"
+        )
+
+    def _accept_vector_candidate(
+        self, item: Any, scored: List[Tuple[Dict[str, Any], float]]
+    ) -> Tuple[Optional[Dict[str, Any]], float, Optional[str]]:
+        if not scored:
+            return None, 0.0, "向量检索未召回任何候选物料"
+
+        best_match, best_score = scored[0]
+        name_key = self._normalize_match_key(item.material_name)
+        spec_key = self._normalize_match_key(item.specification)
+
+        if not name_key:
+            return None, best_score, "缺少物料名称，无法确认标准物料"
+        if not spec_key:
+            return None, best_score, "缺少规格型号，无法唯一确认标准物料"
+
+        best_spec_key = self._normalize_match_key(best_match.get("specification"))
+        if spec_key != best_spec_key:
+            # 高相似度不得覆盖规格硬冲突或缺失的区分属性
+            return None, best_score, self._spec_conflict_reason(item, best_match)
+
+        if not self._name_compatible(name_key, best_match):
+            return None, best_score, (
+                f"物料名称 '{item.material_name}' 与最高相似候选 "
+                f"{best_match.get('sku_code')}（{best_match.get('material_name')}）不兼容"
+            )
+
+        # 多个候选同时满足规格一致与名称兼容时属于歧义，不得任选其一
+        acceptable_skus = list(
+            dict.fromkeys(
+                doc.get("sku_code")
+                for doc, _ in scored
+                if doc.get("sku_code")
+                and self._normalize_match_key(doc.get("specification")) == spec_key
+                and self._name_compatible(name_key, doc)
+            )
+        )
+        if len(acceptable_skus) > 1:
+            return None, best_score, (
+                f"存在多个规格与名称一致的候选：{acceptable_skus}"
+            )
+
+        if best_score < self.match_threshold:
+            return None, best_score, (
+                f"最高相似度 {best_score:.2f} 低于阈值 {self.match_threshold:.2f}"
+            )
+
+        return best_match, best_score, None
+
     def _build_matched_item(
-        self, item: Any, match: Optional[Dict[str, Any]], score: float
+        self,
+        item: Any,
+        match: Optional[Dict[str, Any]],
+        score: float,
+        match_basis: Optional[str] = None,
+        candidate_skus: Optional[List[str]] = None,
+        rejection_reason: Optional[str] = None,
     ) -> MatchedOrderItem:
         return MatchedOrderItem(
             material_name=item.material_name,
@@ -112,45 +221,71 @@ class MatchingAgent(BaseAgent):
             confidence_score=item.confidence_score,
             sku_code=match.get('sku_code') if match else None,
             matched_material_name=match.get('material_name') if match else None,
-            match_score=score
+            matched_specification=match.get('specification') if match else None,
+            match_score=score,
+            candidate_skus=candidate_skus or [],
+            match_basis=match_basis,
+            rejection_reason=rejection_reason,
         )
 
     def _match_item(self, item: Any) -> MatchedOrderItem:
         deterministic_match = self._match_by_catalog_key(item)
         if deterministic_match is not None:
-            return self._build_matched_item(item, deterministic_match, 1.0)
+            return self._build_matched_item(
+                item,
+                deterministic_match,
+                1.0,
+                match_basis=self._catalog_basis(item, deterministic_match),
+                candidate_skus=[deterministic_match.get("sku_code")],
+            )
 
         query_text = self._build_query_text(item)
-        
-        if not query_text:
+        search_results: List[Tuple[Dict[str, Any], float]] = []
+        if query_text:
+            try:
+                search_results = self.faiss_manager.search(query_text, k=3)
+            except Exception as e:
+                self.log_error(f"FAISS search failed for '{query_text}': {str(e)}")
+        else:
             self.log_warning(f"Empty query for item: {item.material_name}")
-            return self._build_matched_item(item, None, 0.0)
-        
-        try:
-            search_results = self.faiss_manager.search(query_text, k=3)
-        except Exception as e:
-            self.log_error(f"FAISS search failed for '{query_text}': {str(e)}")
-            return self._build_matched_item(item, None, 0.0)
-        
-        if not search_results:
-            self.log_warning(f"No matches found for '{query_text}'")
-            return self._build_matched_item(item, None, 0.0)
-        
-        best_match = None
-        best_score = 0.0
-        
-        for doc, distance in search_results:
-            score = self._calculate_match_score(distance)
-            if score > best_score:
-                best_score = score
-                best_match = doc
 
-        if best_score < self.match_threshold:
-            self.log_warning(
-                f"物料 '{item.material_name}' 的最佳匹配低于阈值 {self.match_threshold:.2f}"
+        scored = sorted(
+            (
+                (doc, self._calculate_match_score(distance))
+                for doc, distance in search_results
+            ),
+            key=lambda pair: pair[1],
+            reverse=True,
+        )
+
+        candidate_skus = list(
+            dict.fromkeys(
+                doc.get("sku_code") for doc, _ in scored if doc.get("sku_code")
             )
-        
-        return self._build_matched_item(item, best_match, best_score)
+        )
+
+        accepted_match, best_score, rejection_reason = self._accept_vector_candidate(
+            item, scored
+        )
+
+        if accepted_match is not None:
+            self.log_info(
+                f"物料 '{item.material_name}' 向量接受 SKU "
+                f"{accepted_match.get('sku_code')}，得分 {best_score:.2f}"
+            )
+        else:
+            self.log_warning(
+                f"物料 '{item.material_name}' 未接受候选 SKU：{rejection_reason}"
+            )
+
+        return self._build_matched_item(
+            item,
+            accepted_match,
+            best_score,
+            match_basis="vector_spec_exact" if accepted_match is not None else None,
+            candidate_skus=candidate_skus,
+            rejection_reason=rejection_reason,
+        )
 
     def get_reference_prices(self, matched_order: MatchedOrder) -> Dict[int, float]:
         reference_prices: Dict[int, float] = {}
@@ -191,7 +326,8 @@ class MatchingAgent(BaseAgent):
                 order_number=parsed_order.order_number,
                 customer_name=parsed_order.customer_name,
                 items=matched_items,
-                total_amount=parsed_order.total_amount
+                total_amount=parsed_order.total_amount,
+                parsing_issues=parsed_order.parsing_issues,
             )
             
             self.log_info(f"物料匹配完成，共匹配 {len(matched_items)} 项")

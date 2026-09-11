@@ -1,13 +1,14 @@
 from typing import Any, Callable, Dict, List, NamedTuple, Optional
 from enum import Enum
 import base64
+import hashlib
 import re
 from pathlib import Path
 
 from application.agents.base_agent import BaseAgent
 from config import Config
 from domain.exceptions import ParserException
-from domain.models import ParsedOrder
+from domain.models import ParsedOrder, ParsingIssue
 
 _AMOUNT_TOLERANCE = 0.01
 _MAX_ERROR_DETAIL = 500
@@ -16,6 +17,33 @@ _CORRECTION_INSTRUCTION = """上一次抽取结果在自检中未通过，存在
 {feedback}
 
 请只针对上述问题重新核对原订单，逐项修正后重新输出完整的结构化结果；未被指出问题的字段必须与上一次保持一致，不要改动其他内容。"""
+
+_TEXT_SYSTEM_PROMPT = """你是一位专业的制造业订单解析专家。请从给定的订单文本中提取结构化信息。
+{format_instructions}
+
+注意事项：
+1. 仔细识别物料名称、规格型号、数量、单位、单价、交期等关键字段
+2. 如果某些字段缺失，保持为 null，但尽可能完整提取
+3. 解析置信度：如果订单信息清晰完整，置信度设为 0.9-1.0；如果有部分模糊信息，设为 0.7-0.89；如果信息严重不全，设为 0.5-0.69
+4. 所有金额和数量使用数字类型"""
+
+_IMAGE_SYSTEM_PROMPT = """你是一位专业的制造业订单解析专家。请从这张订单图片中提取结构化信息。
+{format_instructions}
+
+注意事项：
+1. 仔细识别物料名称、规格型号、数量、单位、单价、交期等关键字段
+2. 如果某些字段缺失，保持为 null，但尽可能完整提取
+3. 解析置信度：如果订单信息清晰完整，置信度设为 0.9-1.0；如果有部分模糊信息，设为 0.7-0.89；如果信息严重不全，设为 0.5-0.69
+4. 所有金额和数量使用数字类型"""
+
+
+def prompt_fingerprint() -> str:
+    """返回解析提示词的指纹，用于评测运行身份校验。"""
+    payload = "\n\n".join(
+        (_TEXT_SYSTEM_PROMPT, _IMAGE_SYSTEM_PROMPT, _CORRECTION_INSTRUCTION)
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
 
 
 class ParserScenario(str, Enum):
@@ -36,6 +64,17 @@ class ParserAgent(BaseAgent):
         self.scenario = scenario
         self.parser = None
         self.last_self_correction: Optional[Dict[str, Any]] = None
+        self.last_usage: Dict[str, int] = self._empty_usage()
+
+    @staticmethod
+    def _empty_usage() -> Dict[str, int]:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    def _record_usage(self, message: Any) -> None:
+        usage = getattr(message, "usage_metadata", None) or {}
+        self.last_usage["prompt_tokens"] += int(usage.get("input_tokens") or 0)
+        self.last_usage["completion_tokens"] += int(usage.get("output_tokens") or 0)
+        self.last_usage["total_tokens"] += int(usage.get("total_tokens") or 0)
     
     def _get_output_parser(self):
         if self.parser is None:
@@ -72,14 +111,7 @@ class ParserAgent(BaseAgent):
         from langchain_core.prompts import ChatPromptTemplate
 
         messages = [
-            ("system", """你是一位专业的制造业订单解析专家。请从给定的订单文本中提取结构化信息。
-{format_instructions}
-
-注意事项：
-1. 仔细识别物料名称、规格型号、数量、单位、单价、交期等关键字段
-2. 如果某些字段缺失，保持为 null，但尽可能完整提取
-3. 解析置信度：如果订单信息清晰完整，置信度设为 0.9-1.0；如果有部分模糊信息，设为 0.7-0.89；如果信息严重不全，设为 0.5-0.69
-4. 所有金额和数量使用数字类型"""),
+            ("system", _TEXT_SYSTEM_PROMPT),
             ("user", "订单文本如下：\n{order_text}")
         ]
         if feedback:
@@ -91,14 +123,7 @@ class ParserAgent(BaseAgent):
         return [
             {
                 "type": "text",
-                "text": f"""你是一位专业的制造业订单解析专家。请从这张订单图片中提取结构化信息。
-{format_instructions}
-
-注意事项：
-1. 仔细识别物料名称、规格型号、数量、单位、单价、交期等关键字段
-2. 如果某些字段缺失，保持为 null，但尽可能完整提取
-3. 解析置信度：如果订单信息清晰完整，置信度设为 0.9-1.0；如果有部分模糊信息，设为 0.7-0.89；如果信息严重不全，设为 0.5-0.69
-4. 所有金额和数量使用数字类型"""
+                "text": _IMAGE_SYSTEM_PROMPT.format(format_instructions=format_instructions)
             },
             {
                 "type": "image_url",
@@ -111,6 +136,7 @@ class ParserAgent(BaseAgent):
     def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         self.log_info(f"开始解析订单，场景: {self.scenario}")
         self.last_self_correction = None
+        self.last_usage = self._empty_usage()
         
         try:
             if self.scenario == ParserScenario.IMAGE_OCR:
@@ -122,7 +148,8 @@ class ParserAgent(BaseAgent):
             return {
                 "success": False,
                 "parsed_order": None,
-                "message": f"解析失败: {str(e)}"
+                "message": f"解析失败: {str(e)}",
+                "usage": dict(self.last_usage),
             }
     
     def _process_text(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -140,20 +167,24 @@ class ParserAgent(BaseAgent):
         return {
             "success": True,
             "parsed_order": parsed_order,
-            "message": "解析成功"
+            "message": "解析成功",
+            "usage": dict(self.last_usage),
         }
     
     def _extract_text(self, order_text: str, feedback: Optional[str]) -> ParsedOrder:
         parser = self._get_output_parser()
-        chain = self._create_text_prompt(feedback) | self._get_llm() | parser
-        
+        prompt = self._create_text_prompt(feedback)
+
         payload: Dict[str, Any] = {
             "order_text": order_text,
             "format_instructions": parser.get_format_instructions(),
         }
         if feedback:
             payload["feedback"] = feedback
-        return chain.invoke(payload)
+
+        message = (prompt | self._get_llm()).invoke(payload)
+        self._record_usage(message)
+        return parser.parse(message.content)
     
     def _process_image(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         image_path = input_data.get("image_path", "")
@@ -175,7 +206,8 @@ class ParserAgent(BaseAgent):
         return {
             "success": True,
             "parsed_order": parsed_order,
-            "message": "解析成功"
+            "message": "解析成功",
+            "usage": dict(self.last_usage),
         }
     
     def _extract_image(self, image_path: str, image_type: str, feedback: Optional[str]) -> ParsedOrder:
@@ -192,7 +224,9 @@ class ParserAgent(BaseAgent):
         if feedback:
             messages.append(HumanMessage(content=_CORRECTION_INSTRUCTION.format(feedback=feedback)))
 
-        return (self._get_llm() | parser).invoke(messages)
+        message = self._get_llm().invoke(messages)
+        self._record_usage(message)
+        return parser.parse(message.content)
     
     def _parse_with_self_correction(
         self,
@@ -307,9 +341,10 @@ class ParserAgent(BaseAgent):
             return None
         
         items = parsed_order.items
-        if any(item.unit_price is None for item in items):
+        if any(item.quantity is None or item.unit_price is None for item in items):
+            # 条件不足时不做金额核验；缺失字段由下游风控标记，不按零参与换算
             return None
-        
+
         computed = sum(item.quantity * item.unit_price for item in items)
         tolerance = max(1.0, abs(total_amount) * _AMOUNT_TOLERANCE)
         if abs(computed - total_amount) > tolerance:
@@ -322,6 +357,11 @@ class ParserAgent(BaseAgent):
     def _flag_unresolved(
         self, parsed_order: ParsedOrder, problems: List[ExtractionProblem]
     ) -> ParsedOrder:
+        parsed_order.parsing_issues = [
+            ParsingIssue(item_index=problem.item_index, description=problem.description)
+            for problem in problems
+        ]
+
         unresolved_confidence = max(0.0, self.config.risk.confidence_threshold - 0.1)
         indexes = {problem.item_index for problem in problems}
         targets = range(len(parsed_order.items)) if None in indexes else indexes

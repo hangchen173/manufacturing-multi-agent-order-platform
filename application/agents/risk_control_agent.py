@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import date, datetime
 from application.agents.base_agent import BaseAgent
 from config import Config
 from domain.constants import (
@@ -7,6 +7,7 @@ from domain.constants import (
     IssueType, 
     LINE_TOTAL_TOLERANCE,
     PACK_QUANTITY_MULTIPLE,
+    PACK_QUANTITY_UNITS,
     PRICE_ABNORMALITY_RATIO_HIGH,
     PRICE_ABNORMALITY_RATIO_LOW,
     PRICE_POLICY_RATIO_MAX
@@ -36,6 +37,9 @@ class RiskControlAgent(BaseAgent):
     def _check_unknown_material(self, item: Any, item_index: int) -> List[RiskIssue]:
         if getattr(item, 'sku_code', None) and item.match_score >= self.match_threshold:
             return []
+        if getattr(item, "candidate_skus", None):
+            # 已召回候选但无法唯一确认，交由 _check_ambiguous_match 处理
+            return []
         return [RiskIssue(
             item_index=item_index,
             issue_type=IssueType.UNKNOWN_MATERIAL.value,
@@ -45,6 +49,41 @@ class RiskControlAgent(BaseAgent):
             ),
             severity=SeverityLevel.HIGH.value
         )]
+
+    def _check_ambiguous_match(self, item: Any, item_index: int) -> List[RiskIssue]:
+        if getattr(item, "sku_code", None):
+            return []
+        if not getattr(item, "candidate_skus", None):
+            return []
+        if not (item.specification or "").strip():
+            # 缺规格已由 _check_ambiguous_specification 覆盖
+            return []
+        reason = (
+            getattr(item, "rejection_reason", None)
+            or "存在多个候选，无法唯一确认标准物料"
+        )
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.AMBIGUOUS_MATCH.value,
+            description=f"物料 '{item.material_name}' 无法唯一确认标准物料：{reason}",
+            severity=SeverityLevel.HIGH.value
+        )]
+
+    def _check_parsing_issues(self, matched_order: MatchedOrder) -> List[RiskIssue]:
+        issues = []
+        for problem in getattr(matched_order, "parsing_issues", None) or []:
+            item_index = (
+                problem.item_index
+                if problem.item_index is not None
+                else ORDER_LEVEL_ITEM_INDEX
+            )
+            issues.append(RiskIssue(
+                item_index=item_index,
+                issue_type=IssueType.UNRESOLVED_PARSING_PROBLEM.value,
+                description=f"解析自检未解决：{problem.description}",
+                severity=SeverityLevel.HIGH.value
+            ))
+        return issues
 
     def _check_ambiguous_specification(self, item: Any, item_index: int) -> List[RiskIssue]:
         if (item.specification or "").strip():
@@ -56,15 +95,41 @@ class RiskControlAgent(BaseAgent):
             severity=SeverityLevel.HIGH.value
         )]
 
+    def _check_missing_quantity(self, item: Any, item_index: int) -> List[RiskIssue]:
+        if item.quantity is not None:
+            return []
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.MISSING_QUANTITY.value,
+            description=f"物料 '{item.material_name}' 缺少数量，禁止猜测，需人工确认",
+            severity=SeverityLevel.HIGH.value
+        )]
+
+    def _check_missing_unit_price(self, item: Any, item_index: int) -> List[RiskIssue]:
+        if item.unit_price is not None:
+            return []
+        return [RiskIssue(
+            item_index=item_index,
+            issue_type=IssueType.MISSING_UNIT_PRICE.value,
+            description=f"物料 '{item.material_name}' 缺少单价，禁止按零计算，需人工确认",
+            severity=SeverityLevel.HIGH.value
+        )]
+
     def _check_non_pack_quantity(self, item: Any, item_index: int) -> List[RiskIssue]:
         if item.quantity is None or item.quantity <= 0:
+            return []
+        if (item.unit or "").strip() not in PACK_QUANTITY_UNITS:
+            # 包装数量约束仅覆盖模拟业务范围内的计件单位，其他计量单位不套用
             return []
         if item.quantity % PACK_QUANTITY_MULTIPLE == 0:
             return []
         return [RiskIssue(
             item_index=item_index,
             issue_type=IssueType.NON_PACK_QUANTITY.value,
-            description=f"数量 {item.quantity} 不是包装数量 {PACK_QUANTITY_MULTIPLE} 的整数倍",
+            description=(
+                f"数量 {item.quantity} {item.unit} 不是包装数量 "
+                f"{PACK_QUANTITY_MULTIPLE} 的整数倍"
+            ),
             severity=SeverityLevel.HIGH.value
         )]
 
@@ -95,11 +160,27 @@ class RiskControlAgent(BaseAgent):
     def _check_line_total(self, matched_order: MatchedOrder) -> List[RiskIssue]:
         total_amount = getattr(matched_order, "total_amount", None)
         if total_amount is None:
+            # 总额允许缺失：缺失即跳过金额核验，不补造默认值
             return []
 
+        incomplete = [
+            index for index, item in enumerate(matched_order.items)
+            if item.quantity is None or item.unit_price is None
+        ]
+        if incomplete:
+            # 条件不足时明确标识，缺失值绝不按零参与换算以制造不一致
+            return [RiskIssue(
+                item_index=ORDER_LEVEL_ITEM_INDEX,
+                issue_type=IssueType.INSUFFICIENT_AMOUNT_INFO.value,
+                description=(
+                    f"第 {[index + 1 for index in incomplete]} 行缺少数量或单价，"
+                    "无法核验订单总额，未按零参与计算"
+                ),
+                severity=SeverityLevel.MEDIUM.value
+            )]
+
         computed_total = sum(
-            float(item.quantity or 0) * float(item.unit_price or 0)
-            for item in matched_order.items
+            item.quantity * item.unit_price for item in matched_order.items
         )
         if abs(computed_total - total_amount) <= LINE_TOTAL_TOLERANCE:
             return []
@@ -145,35 +226,35 @@ class RiskControlAgent(BaseAgent):
         
         return issues
     
-    def _reference_time(self) -> datetime:
+    def _reference_date(self) -> date:
         if self.evaluation_as_of:
-            return datetime.strptime(self.evaluation_as_of, "%Y-%m-%d")
-        return datetime.now()
+            return datetime.strptime(self.evaluation_as_of, "%Y-%m-%d").date()
+        return datetime.now().date()
 
     def _check_delivery_date(self, item: Any, item_index: int) -> List[RiskIssue]:
-        issues = []
-        
         if not item.delivery_date:
-            return issues
+            return []
         
         try:
-            delivery_date = datetime.strptime(item.delivery_date, "%Y-%m-%d")
-            if delivery_date < self._reference_time():
-                issues.append(RiskIssue(
-                    item_index=item_index,
-                    issue_type=IssueType.PAST_DELIVERY.value,
-                    description=f"交期 {item.delivery_date} 早于评估时点 {self._reference_time():%Y-%m-%d}",
-                    severity=SeverityLevel.HIGH.value
-                ))
+            delivery_date = datetime.strptime(item.delivery_date, "%Y-%m-%d").date()
         except ValueError:
-            issues.append(RiskIssue(
+            return [RiskIssue(
                 item_index=item_index,
                 issue_type=IssueType.INVALID_DATE_FORMAT.value,
                 description=f"交期格式 {item.delivery_date} 无效，应为 YYYY-MM-DD",
                 severity=SeverityLevel.MEDIUM.value
-            ))
+            )]
         
-        return issues
+        # 按日期语义比较：当日交期不算过去
+        if delivery_date < self._reference_date():
+            return [RiskIssue(
+                item_index=item_index,
+                issue_type=IssueType.PAST_DELIVERY.value,
+                description=f"交期 {item.delivery_date} 早于评估日期 {self._reference_date():%Y-%m-%d}",
+                severity=SeverityLevel.HIGH.value
+            )]
+        
+        return []
     
     def _check_quantity(self, item: Any, item_index: int) -> List[RiskIssue]:
         issues = []
@@ -200,7 +281,10 @@ class RiskControlAgent(BaseAgent):
         all_issues = []
         all_issues.extend(self._check_parsing_confidence(item, item_index))
         all_issues.extend(self._check_unknown_material(item, item_index))
+        all_issues.extend(self._check_ambiguous_match(item, item_index))
         all_issues.extend(self._check_ambiguous_specification(item, item_index))
+        all_issues.extend(self._check_missing_quantity(item, item_index))
+        all_issues.extend(self._check_missing_unit_price(item, item_index))
         all_issues.extend(self._check_non_pack_quantity(item, item_index))
         all_issues.extend(self._check_price_abnormality(item, item_index, reference_price))
         all_issues.extend(self._check_price_policy(item, item_index, reference_price))
@@ -223,7 +307,7 @@ class RiskControlAgent(BaseAgent):
                     "success": True,
                     "risk_result": RiskCheckResult(
                         needs_confirmation=True,
-                        issues=[],
+                        issues=self._check_parsing_issues(matched_order),
                         overall_confidence=0.0
                     ),
                     "message": "订单无有效物料明细，需人工确认"
@@ -237,6 +321,7 @@ class RiskControlAgent(BaseAgent):
                 all_issues.extend(item_issues)
             
             all_issues.extend(self._check_line_total(matched_order))
+            all_issues.extend(self._check_parsing_issues(matched_order))
             
             overall_confidence = self._calculate_overall_confidence(
                 all_issues, 

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional
 
 from domain.models import OrderStatus
@@ -9,6 +9,7 @@ class StageExecutionResult:
     success: bool
     message: str
     payload: Any = None
+    usage: Dict[str, int] = field(default_factory=dict)
 
 
 class AgentPipelineStage:
@@ -41,12 +42,14 @@ class AgentPipelineStage:
             )
 
         result = self.runner(input_data)
+        usage = result.get("usage") or {}
         if not result.get("success"):
             message = result.get("message", f"{self.name} 阶段执行失败")
             order_manager.set_error(order_id, message)
             return StageExecutionResult(
                 success=False,
                 message=message,
+                usage=usage,
             )
 
         payload = result.get(self.payload_key)
@@ -55,10 +58,11 @@ class AgentPipelineStage:
             if not persisted:
                 message = f"{self.name} 阶段结果持久化失败"
                 order_manager.set_error(order_id, message)
-                return StageExecutionResult(success=False, message=message)
+                return StageExecutionResult(success=False, message=message, usage=usage)
 
         return StageExecutionResult(
             success=True,
             message=result.get("message", f"{self.name} 阶段执行成功"),
             payload=payload,
+            usage=usage,
         )

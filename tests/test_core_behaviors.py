@@ -171,6 +171,42 @@ class CoreBehaviorTests(unittest.TestCase):
         self.assertLess(parsed_order.items[0].confidence_score, Config().risk.confidence_threshold)
         self.assertLess(parsed_order.parsing_confidence, Config().risk.confidence_threshold)
 
+    def test_parser_exposes_unresolved_problems_as_structured_issues(self):
+        agent, _ = _build_parser_agent(
+            _order_payload(""),
+            _order_payload(""),
+        )
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        parsed_order = result["parsed_order"]
+        self.assertEqual(len(parsed_order.parsing_issues), 1)
+        self.assertEqual(parsed_order.parsing_issues[0].item_index, 0)
+        self.assertIn("规格型号缺失", parsed_order.parsing_issues[0].description)
+
+    def test_parser_records_order_level_problem_without_item_index(self):
+        agent, _ = _build_parser_agent(
+            _order_payload("M8"),
+            _order_payload("M8"),
+        )
+
+        result = agent.run({"order_text": "1 螺丝 M8 10 个 1.0 10.0\n2 螺母 M8 5 个 2.0 10.0"})
+
+        issues = result["parsed_order"].parsing_issues
+        self.assertEqual(len(issues), 1)
+        self.assertIsNone(issues[0].item_index)
+        self.assertIn("明细数量不一致", issues[0].description)
+
+    def test_resolved_parse_problem_leaves_no_structured_issue(self):
+        agent, _ = _build_parser_agent(
+            _order_payload(""),
+            _order_payload("M8"),
+        )
+
+        result = agent.run({"order_text": ORDER_TEXT})
+
+        self.assertEqual(result["parsed_order"].parsing_issues, [])
+
     def test_parser_detects_row_count_mismatch(self):
         agent, prompts = _build_parser_agent(
             _order_payload("M8"),

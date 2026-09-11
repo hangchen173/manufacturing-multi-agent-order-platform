@@ -11,6 +11,8 @@
 
 状态更新：2026-09-11，新增第六节「评测暴露的行为缺陷」：过度送审、auto_correct 通路缺失、思考模式开关未暴露等，均待修复。
 
+状态更新：2026-09-11，更正第六节版本归因：240 条自建集基线跑的是旧版 `00f4656`，其过度送审、auto_correct 缺失反映**旧版逻辑**，不得归因于当前新增的 HIGH 严重度规则；撤销「当前 AUTO_CORRECT 分支不可达」的判断；并明确「旧端到端基线 / 当前下游重放 / 待执行的新端到端评测」三个口径（见第六节）。
+
 ---
 
 ## 一、已复现缺陷（P0-1 / P0-2 已修复）
@@ -122,6 +124,7 @@ needs_confirmation = low_match_score or risk_check_result.needs_confirmation
 - 归档路径：[baseline_generated_complex_test_20260910_234250/summary.md](file:///Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250/summary.md)
 - 240 条样本，成功率 100%；`material_name_raw` 99.78%、`specification_raw` 99.25%、`quantity`/`unit`/`unit_price` 均 100%；`sku_top1_accuracy` 80.52%、`business_decision_accuracy` 35.00%。
 - 说明：自建集用于回归与鲁棒性验证，公开集（5.1）用于避免「自造集自证」。
+- 版本提示：本基线 `run_manifest.json` 的 `code_version = 00f4656`（旧版，无 `business_decision` 字段），其 35.00% 动作命中与 80.52% SKU 均为旧版端到端结果，不能代表当前代码，详见第六节「三个评测口径」。
 
 ---
 
@@ -129,21 +132,48 @@ needs_confirmation = low_match_score or risk_check_result.needs_confirmation
 
 来源：[baseline_generated_complex_test_20260910_234250](file:///Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250/summary.md)（240 条自建集评估结果）+ 代码静态分析。以下逐条区分「已实测」与「待验证假设」。
 
-### P1-4 严重过度送审，自动化率仅 6.25%（已实测）
+**版本前提（务必先读）**：该基线报告的 `run_manifest.json` 记录 `code_version = 00f4656b96536b96c1dd2ce3bbc23c9a53a5cedd`（提交信息 "Add dataset"），即**旧版代码**。该版本的预测输出中**不存在 `business_decision` 字段**（`grep` 命中 0 次），也**不存在 `_decide_business_action`**（该符号首现于 `8e06bed`，晚于 `00f4656`）。因此本节 P1-4 / P1-5 的**数字属于旧版行为，不能当作当前代码的实测结论**。
 
-- 数据：`needs_confirmation_rate` 93.75%（225/240）；实际自动放行 15/240 = **6.25%**。
+旧版（`00f4656`）风控送审判定为：
+
+```python
+needs_confirmation = (
+    len(all_issues) > 0 or
+    overall_confidence < self.confidence_threshold
+)
+```
+
+即**任一明细产生任一 issue 即整单送审**，且当时仅有 5 个检查（parsing_confidence / match_score / price_abnormality / delivery_date / quantity）。基线 240 条的 issue 分布为 `price_abnormal 486 / low_match_score 121 / invalid_date_format 2`（共 609 条，几乎每单至少一条），这正是 93.75% 送审的直接来源。
+
+当前版本已改为 `needs_confirmation = any(issue.severity == HIGH)`（见 [risk_control_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/risk_control_agent.py#L331-L333)），**与产生上述数字的旧逻辑不同**；当前代码的真实行为需由新一轮端到端评测（P2-8）重新测量，不能沿用旧基线数字。
+
+### P1-4 严重过度送审，自动化率仅 6.25%（旧版 00f4656 已实测；当前代码待重测）
+
+- 数据（旧版 `00f4656`）：`needs_confirmation_rate` 93.75%（225/240）；实际自动放行 15/240 = **6.25%**。
 - 交叉表（标注三类各 80 条，均衡）：
   - 标注 `auto_approve` 80 条 → 72 条被误送审，误报率 **90%**；
   - 标注 `auto_correct` 80 条 → 77 条被送审；
   - 标注 `manual_review` 80 条 → 76 条被送审，真风险召回 95%。
-- 影响：系统几乎把所有订单转人工，「自动处理」名存实亡；`business_decision_accuracy` 被压到 35.00%。
-- 位置：[risk_control_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/risk_control_agent.py#L246-L248) 的 `needs_confirmation = any(issue.severity == HIGH)`——任一明细的任一 HIGH 问题即整单送审，无风险评分、无分级。
+- 影响：旧版系统几乎把所有订单转人工，「自动处理」名存实亡；该基线的 `business_decision_accuracy` 被压到 35.00%。
+- 归因更正：其根因是**旧版** [risk_control_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/risk_control_agent.py#L331-L333) 的「任一 issue 即送审」判定，**不是**当前新增的 HIGH 严重度规则（`any(issue.severity == HIGH)`）。当前 HIGH 规则是否仍过度送审，须由 P2-8 的端到端评测确认。
 
-### P1-5 auto_correct 通路缺失，决策指标上限被锁死（已实测）
+### P1-5 auto_correct 通路缺失（旧版无该动作；当前分支可达性已更正）
 
-- 240 条中系统输出 `auto_correct` **0 次**。
-- 位置：[contracts.py](file:///Users/cmh/Documents/AGENT_project/evaluation/contracts.py) 的 `predicted_action` 只映射 `manual_review` / `auto_approve`；[order_processing.py](file:///Users/cmh/Documents/AGENT_project/application/orchestrators/order_processing.py) 的 `_decide_business_action` 中 AUTO_CORRECT 分支因 `needs_confirmation` 为真时提前返回 MANUAL_REVIEW 而不可达。
-- 影响：标注含 80 条 `auto_correct`，指标理论最高 160/240 = **66.7%**，无法更高。
+- 事实：基线（旧版 `00f4656`）240 条中输出 `auto_correct` **0 次**。
+- 归因更正：`00f4656` 中**根本没有 `business_decision` 字段与 `_decide_business_action`**，动作空间只有「送审 / 自动放行」两类；当时 [contracts.py](file:///Users/cmh/Documents/AGENT_project/evaluation/contracts.py) 的 `predicted_action` 也是「无 `business_decision` 时按 `needs_confirmation` 回退」，所以旧基线既无法产生 `auto_correct`，其 35.00% 动作命中也是**字段回退口径**的产物，而非动作逻辑本身。
+- **撤销**此前「[order_processing.py](file:///Users/cmh/Documents/AGENT_project/application/orchestrators/order_processing.py#L252-L279) 的 AUTO_CORRECT 分支因 `needs_confirmation` 为真时提前返回 MANUAL_REVIEW 而不可达」的判断：当前实现中，`needs_confirmation` 为假且存在归一化时，AUTO_CORRECT 分支**可达**。当前下游重放已实测存在自动纠错动作与 `auto_handle_coverage 149/240`（见「三个口径」一节的当前重放列），故「不可达」结论不成立。
+- 影响（仅对旧版成立）：旧版基线标注含 80 条 `auto_correct`，其动作指标理论最高被锁在 160/240 = **66.7%**。当前代码的可达性由 P2-8 端到端评测给出真实值。
+
+### 三个评测口径（不得混称）
+
+| 口径 | 版本 / 方法 | SKU 指标 | 动作指标 | 性质 |
+|---|---|---|---|---|
+| 旧端到端基线 | `00f4656`，真实 Qwen 端到端，240 条自建集 | `sku_top1_accuracy` 80.52% | `business_decision_accuracy` 35.00%（字段回退口径） | 旧版端到端，仅作历史对照 |
+| 当前下游重放 | 当前 HEAD，固定旧 `ParsedOrder` 只重放 Matching/Risk/动作，不调 Qwen，240 条 | `sku_accuracy` 98.86%（5789/5856） | `business_decision_accuracy` 92.92%（223/240） | **下游重放，非端到端** |
+| 待执行的新端到端 | 冻结修复版本 + 真实 Qwen 全链路，240 条自建集 + 独立验收样本 | 待测 | 待测 | P2-8，唯一可称「新版端到端」的结果 |
+
+- 归属：[旧端到端基线](file:///Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250/summary.md)；[当前下游重放](file:///Users/cmh/Documents/AGENT_project/evaluation/results/downstream_replay_generated_complex_20260911_202838/replay_summary.json)。
+- 口径纪律：下游重放（不调 Parser / Qwen）的 SKU 与动作命中**不等于**端到端准确率；在 P2-8 产出结果前，不得用 98.86% / 92.92% 宣称新版端到端指标，也不得以 80.52% / 35.00% 描述当前代码。
 
 ### P1-6 软信号被标为 HIGH 严重度（待验证假设）
 

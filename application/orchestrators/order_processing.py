@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from application.agents import MatchingAgent, ParserAgent, ParserScenario, RiskControlAgent
@@ -12,6 +12,7 @@ from domain.models import (
     BusinessDecision,
     FinalOrderResult,
     MatchedOrderItem,
+    NormalizationChange,
     OrderStatus,
 )
 from infrastructure.document_processing import DocumentLoader
@@ -30,6 +31,7 @@ class OrderProcessingOrchestrator:
         self.config = config or Config()
         self.order_manager = order_manager or OrderManager(config=self.config)
         self.document_loader = document_loader or DocumentLoader()
+        self._last_usage: Dict[str, int] = self._empty_usage()
         
         self.parser_agent_general = parser_agent_general or ParserAgent(
             scenario=ParserScenario.GENERAL_PARSING,
@@ -75,14 +77,20 @@ class OrderProcessingOrchestrator:
             persist_callback=self.order_manager.update_risk_result,
         )
 
+    @staticmethod
+    def _empty_usage() -> Dict[str, int]:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
     def _build_error_response(self, message: str, order_id: Optional[str] = None) -> Dict[str, Any]:
         return {
             "success": False,
             "order_id": order_id,
             "message": message,
+            "usage": dict(self._last_usage),
         }
     
     def process_order_from_document(self, file_path: str) -> Dict[str, Any]:
+        self._last_usage = self._empty_usage()
         try:
             file_ext = Path(file_path).suffix.lower()
             
@@ -126,6 +134,7 @@ class OrderProcessingOrchestrator:
         )
     
     def process_order_from_text(self, order_text: str) -> Dict[str, Any]:
+        self._last_usage = self._empty_usage()
         try:
             order_id = self.order_manager.create_order(order_text=order_text)
             return self._process_order_with_parser(
@@ -147,6 +156,7 @@ class OrderProcessingOrchestrator:
             order_id=order_id,
             input_data=parser_input,
         )
+        self._last_usage = dict(parser_result.usage)
         if not parser_result.success:
             return self._build_error_response(parser_result.message, order_id)
 
@@ -235,7 +245,8 @@ class OrderProcessingOrchestrator:
             "final_result": final_result,
             "business_decision": business_decision,
             "needs_confirmation": needs_confirmation,
-            "message": "订单处理完成"
+            "message": "订单处理完成",
+            "usage": dict(self._last_usage),
         }
     
     def _decide_business_action(
@@ -246,26 +257,70 @@ class OrderProcessingOrchestrator:
                 action=BusinessAction.MANUAL_REVIEW,
                 reason="风控发现高风险明细项，需人工确认",
             )
-        
-        normalized_count = sum(
-            1 for item in matched_order.items if self._needs_normalization(item)
-        )
-        if normalized_count:
+
+        normalizations: List[NormalizationChange] = []
+        for item in matched_order.items:
+            normalizations.extend(self._collect_normalizations(item))
+
+        if normalizations:
+            fields = sorted({change.field for change in normalizations})
             return BusinessDecision(
                 action=BusinessAction.AUTO_CORRECT,
-                reason=f"{normalized_count} 行明细按标准物料库完成归一化，未发现风险",
+                reason=(
+                    f"{len(normalizations)} 处明细字段按标准物料库完成确定性归一化"
+                    f"（{'、'.join(fields)}），未改变采购意图，未发现风险"
+                ),
+                normalizations=normalizations,
             )
-        
+
         return BusinessDecision(
             action=BusinessAction.AUTO_APPROVE,
             reason="全部明细与标准物料库一致，未发现风险",
         )
-    
+
+    _NAME_BASIS = {
+        "catalog_alias_spec_exact": "物料名称命中标准库已登记别名",
+        "catalog_name_spec_exact": "物料名称为标准名的等价书写",
+        "vector_spec_exact": "物料名称与标准库名称兼容且规格一致",
+    }
+
+    def _collect_normalizations(
+        self, item: MatchedOrderItem
+    ) -> List[NormalizationChange]:
+        # 仅在接受标准 SKU 后才做归一化；未接受任何 SKU 时不得改写任何字段
+        if not item.sku_code:
+            return []
+
+        changes: List[NormalizationChange] = []
+
+        # 名称：登记别名或标准名的等价书写，属于不改变采购意图的确定性归一化
+        if self._differs(item.material_name, item.matched_material_name):
+            changes.append(NormalizationChange(
+                field="material_name",
+                original_value=item.material_name,
+                standard_value=item.matched_material_name,
+                basis=self._NAME_BASIS.get(
+                    item.match_basis or "", "名称归一化为标准物料名"
+                ),
+            ))
+
+        # 规格：匹配已确认标准规格与原规格为等价书写时才归一化，绝不猜测规格
+        if self._differs(item.specification, item.matched_specification):
+            changes.append(NormalizationChange(
+                field="specification",
+                original_value=item.specification,
+                standard_value=item.matched_specification,
+                basis="标准规格与原规格为等价书写",
+            ))
+
+        # 数量、单价、交期不参与自动纠正；单位换算无明确依据一律不自动执行
+        return changes
+
     @staticmethod
-    def _needs_normalization(item: MatchedOrderItem) -> bool:
-        if not item.matched_material_name:
+    def _differs(original: Optional[str], standard: Optional[str]) -> bool:
+        if not original or not standard:
             return False
-        return (item.material_name or "").strip().lower() != item.matched_material_name.strip().lower()
+        return original.strip() != standard.strip()
     
     def _create_confirmation_request(
         self, 
