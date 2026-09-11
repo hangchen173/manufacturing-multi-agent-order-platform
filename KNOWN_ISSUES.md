@@ -9,6 +9,8 @@
 
 状态更新：2026-09-11，CORD 公开集补跑完成，100/100 成功（原 16 条外部原因失败全部消解，详见第五节）。
 
+状态更新：2026-09-11，新增第六节「评测暴露的行为缺陷」：过度送审、auto_correct 通路缺失、思考模式开关未暴露等，均待修复。
+
 ---
 
 ## 一、已复现缺陷（P0-1 / P0-2 已修复）
@@ -122,6 +124,66 @@ needs_confirmation = low_match_score or risk_check_result.needs_confirmation
 - 说明：自建集用于回归与鲁棒性验证，公开集（5.1）用于避免「自造集自证」。
 
 ---
+
+## 六、评测暴露的行为缺陷（2026-09-11 记录，待修复）
+
+来源：[baseline_generated_complex_test_20260910_234250](file:///Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250/summary.md)（240 条自建集评估结果）+ 代码静态分析。以下逐条区分「已实测」与「待验证假设」。
+
+### P1-4 严重过度送审，自动化率仅 6.25%（已实测）
+
+- 数据：`needs_confirmation_rate` 93.75%（225/240）；实际自动放行 15/240 = **6.25%**。
+- 交叉表（标注三类各 80 条，均衡）：
+  - 标注 `auto_approve` 80 条 → 72 条被误送审，误报率 **90%**；
+  - 标注 `auto_correct` 80 条 → 77 条被送审；
+  - 标注 `manual_review` 80 条 → 76 条被送审，真风险召回 95%。
+- 影响：系统几乎把所有订单转人工，「自动处理」名存实亡；`business_decision_accuracy` 被压到 35.00%。
+- 位置：[risk_control_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/risk_control_agent.py#L246-L248) 的 `needs_confirmation = any(issue.severity == HIGH)`——任一明细的任一 HIGH 问题即整单送审，无风险评分、无分级。
+
+### P1-5 auto_correct 通路缺失，决策指标上限被锁死（已实测）
+
+- 240 条中系统输出 `auto_correct` **0 次**。
+- 位置：[contracts.py](file:///Users/cmh/Documents/AGENT_project/evaluation/contracts.py) 的 `predicted_action` 只映射 `manual_review` / `auto_approve`；[order_processing.py](file:///Users/cmh/Documents/AGENT_project/application/orchestrators/order_processing.py) 的 `_decide_business_action` 中 AUTO_CORRECT 分支因 `needs_confirmation` 为真时提前返回 MANUAL_REVIEW 而不可达。
+- 影响：标注含 80 条 `auto_correct`，指标理论最高 160/240 = **66.7%**，无法更高。
+
+### P1-6 软信号被标为 HIGH 严重度（待验证假设）
+
+- 8 个风控检查中有 6 个直接产 HIGH：[risk_control_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/risk_control_agent.py) 的 `_check_non_pack_quantity`（数量非 `PACK_QUANTITY_MULTIPLE`=10 的整数倍）、`_check_price_policy`（单价 > 参考价 1.5 倍）、`_check_unknown_material`（`match_score` < 0.8）、`_check_ambiguous_specification`（规格为空）、`_check_line_total`、`_check_price_abnormality`。
+- 其中「非包装数量」「价格超政策」「缺规格」在业务上多为业务事实，当前却与「单价非法」「过期交期」同级别，直接触发整单送审。
+- 待验证：需先统计 240 条结果的 `issue_type` 分布，确认哪条规则贡献送审最多，再决定降级范围，避免盲改。
+
+### P1-7 spec-only 兜底匹配无条件打满分（待验证假设）
+
+- 位置：[matching_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/matching_agent.py#L58-L80) 的 `_match_by_catalog_key` 在仅命中规格、名称不匹配时仍返回候选；调用方 `_match_item` 对其**无条件赋 `match_score = 1.0`**。
+- 风险：可能匹配到错误 SKU → 参考价失真 → 误报价格异常/超政策 → 送审；也可能因分数虚高掩盖真问题。
+
+### P2-2 解析阶段未暴露思考模式开关，单条延迟高（已实测）
+
+- 位置：[parser_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/parser_agent.py) 的 `_get_llm_for_scenario` 构造 `ChatOpenAI` 未传 `enable_thinking`；全仓库检索无 `enable_thinking` / `reasoning_effort`。
+- 实测（`qwen3.7-plus`，单条 xlsx 订单）：
+
+  | 配置 | total_tokens | 单次调用耗时 |
+  |---|---|---|
+  | 默认（带思考） | 10739 | 102.1s |
+  | `enable_thinking=False` | 5650（-47%） | 30.5s（**-70%**） |
+
+- 链路插桩：整链 113.3s，LLM 仅调用 1 次，占约 **90%**；其余约 11s 为嵌入模型加载 + 读文件 + 匹配 + 风控。
+- 备注：关闭思考对字段抽取准确率的影响**尚未实测**，需 A/B 验证后再改（见下）。
+
+### P2-3 参考价查询为线性扫描（代码分析）
+
+- 位置：[matching_agent.py](file:///Users/cmh/Documents/AGENT_project/application/agents/matching_agent.py) 的 `get_reference_prices` 对每条明细在 `faiss_manager.metadata` 上做 `next((row for row in ... if row["sku_code"] == item.sku_code), None)`，复杂度 O(明细数 × 物料库大小)。
+- 建议：按 `sku_code` 预建字典索引。
+
+### P2-4 嵌入模型冷启动约 11s（已实测）
+
+- 位置：[faiss_manager.py](file:///Users/cmh/Documents/AGENT_project/infrastructure/vector_store/faiss_manager.py) 的 `_load_model`。链路插桩中 LLM 之外的约 11s 主要来自首次加载 SentenceTransformer。
+- 建议：服务启动时预热并常驻。
+
+### 待办：思考模式对抽取准确率的 A/B 验证
+
+- 现状：关闭思考的速度收益已实测（-70%），但准确率影响未知，不能直接全量切换。
+- 建议方案：从自建集抽 30 条（三类决策各 10 条）+ CORD 抽 20 条，分别跑「思考开 / 思考关」两配置，对比：字段抽取率（`material_name_raw` / `specification_raw` / `quantity` / `unit_price` / `total_amount`）、`sku_top1_accuracy`、JSON 非法/重试率、单条耗时。
+- 预判：干净结构化 xlsx 大概率不受影响；图片 OCR、多明细切分、合计金额类字段风险较高，可考虑按文档类型分层开关。
 
 ## 本次实测已确认正常的链路
 
