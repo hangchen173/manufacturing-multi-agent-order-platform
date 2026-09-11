@@ -116,14 +116,7 @@ class MatchingAgent(BaseAgent):
         if not name_key or not spec_key:
             return None
 
-        exact_rows = self._name_spec_index.get((name_key, spec_key), [])
-        if len(exact_rows) == 1:
-            return exact_rows[0]
-        if len(exact_rows) > 1:
-            # 完整名称与规格对应多个 SKU，显式歧义，不默认取第一条
-            return None
-
-        # 规格唯一但仍需名称（标准名或已登记别名）兼容才接受
+        # 全目录验证标准名和别名，避免精确名称路径掩盖另一 SKU 的别名冲突。
         compatible_rows = [
             row
             for row in self._spec_index.get(spec_key, [])
@@ -229,6 +222,18 @@ class MatchingAgent(BaseAgent):
         )
 
     def _match_item(self, item: Any) -> MatchedOrderItem:
+        self._build_key_index()
+        name_key = self._normalize_match_key(item.material_name)
+        spec_key = self._normalize_match_key(item.specification)
+        compatible_skus = list(dict.fromkeys(
+            row["sku_code"] for row in self._spec_index.get(spec_key, [])
+            if self._name_compatible(name_key, row)
+        ))
+        if len(compatible_skus) > 1:
+            return self._build_matched_item(
+                item, None, 0.0, candidate_skus=compatible_skus,
+                rejection_reason=f"全目录存在多个规格与名称一致的候选：{compatible_skus}",
+            )
         deterministic_match = self._match_by_catalog_key(item)
         if deterministic_match is not None:
             return self._build_matched_item(

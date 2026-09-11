@@ -2,10 +2,19 @@ import type { OrderDetail, OrderSummary } from './types'
 
 type ApiResponse<T> = { success: boolean; data?: T; message?: string }
 
+export class ApiError extends Error {
+  constructor(message: string, public orderId?: string) { super(message) }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, init)
-  const payload = await response.json() as ApiResponse<T>
-  if (!response.ok || !payload.success) throw new Error(payload.message || '请求失败，请稍后重试')
+  let payload: ApiResponse<T>
+  try { payload = await response.json() as ApiResponse<T> }
+  catch { throw new ApiError(`服务响应异常（${response.status}），请刷新订单列表核对处理状态`) }
+  if (!response.ok || !payload.success) {
+    const detail = payload.data as { message?: string; order_id?: string } | undefined
+    throw new ApiError(payload.message || detail?.message || '请求失败，请稍后重试', detail?.order_id)
+  }
   return payload.data as T
 }
 

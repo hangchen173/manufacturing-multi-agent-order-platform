@@ -45,3 +45,13 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 
 datasets/generated_complex
+output/
+.playwright-cli/
+
+# Frozen interview fixtures must travel with their content hashes.
+!datasets/self_built/interview_v1/**/orders/*.pdf
+!datasets/self_built/interview_v1/**/orders/*.xlsx
+!datasets/self_built/interview_v1/**/orders/*.png
+!datasets/self_built/pdf_regression_v1/orders/*.pdf
+datasets/self_built
+evaluation/results

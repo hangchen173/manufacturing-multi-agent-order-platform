@@ -82,11 +82,16 @@ class OrderProcessingOrchestrator:
         return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     def _build_error_response(self, message: str, order_id: Optional[str] = None) -> Dict[str, Any]:
+        try:
+            order = self.order_manager.get_order(order_id) if order_id else None
+        except Exception:
+            order = None
         return {
             "success": False,
             "order_id": order_id,
             "message": message,
             "usage": dict(self._last_usage),
+            "diagnostics": order.processing_diagnostics if order else {},
         }
     
     def process_order_from_document(self, file_path: str) -> Dict[str, Any]:
@@ -146,6 +151,21 @@ class OrderProcessingOrchestrator:
             return self._build_error_response(f"订单处理失败: {str(e)}")
     
     def _process_order_with_parser(
+        self, order_id: str, parser_stage: AgentPipelineStage, parser_input: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        try:
+            return self._run_order_pipeline(order_id, parser_stage, parser_input)
+        except Exception as exc:
+            message = f"订单处理失败: {exc}"
+            try:
+                persisted = self.order_manager.set_error(order_id, message)
+            except Exception:
+                persisted = False
+            response = self._build_error_response(message, order_id)
+            response["failure_status_persisted"] = persisted
+            return response
+
+    def _run_order_pipeline(
         self, 
         order_id: str, 
         parser_stage: AgentPipelineStage,
@@ -214,19 +234,13 @@ class OrderProcessingOrchestrator:
         business_decision = self._decide_business_action(matched_order, needs_confirmation)
         
         final_status = OrderStatus.COMPLETED
+        confirmation_request = None
         if needs_confirmation:
             final_status = OrderStatus.NEEDS_CONFIRMATION
             confirmation_request = self._create_confirmation_request(
                 order_id, 
                 risk_check_result
             )
-            self.order_manager.add_confirmation_request(order_id, confirmation_request)
-        
-        self.order_manager.update_order_status(
-            order_id,
-            final_status,
-            reason="requires_manual_confirmation" if needs_confirmation else "processing_completed",
-        )
         
         order = self.order_manager.get_order(order_id)
         final_result = FinalOrderResult(
@@ -237,7 +251,8 @@ class OrderProcessingOrchestrator:
             business_decision=business_decision,
             message="订单处理完成"
         )
-        self.order_manager.update_final_result(order_id, final_result)
+        if not self.order_manager.finalize_order(order_id, final_result, confirmation_request):
+            return self._build_error_response("订单状态已变化，无法保存最终结果", order_id)
         
         return {
             "success": True,
@@ -247,6 +262,7 @@ class OrderProcessingOrchestrator:
             "needs_confirmation": needs_confirmation,
             "message": "订单处理完成",
             "usage": dict(self._last_usage),
+            "diagnostics": order.processing_diagnostics,
         }
     
     def _decide_business_action(
@@ -259,8 +275,8 @@ class OrderProcessingOrchestrator:
             )
 
         normalizations: List[NormalizationChange] = []
-        for item in matched_order.items:
-            normalizations.extend(self._collect_normalizations(item))
+        for index, item in enumerate(matched_order.items):
+            normalizations.extend(self._collect_normalizations(item, index))
 
         if normalizations:
             fields = sorted({change.field for change in normalizations})
@@ -285,7 +301,7 @@ class OrderProcessingOrchestrator:
     }
 
     def _collect_normalizations(
-        self, item: MatchedOrderItem
+        self, item: MatchedOrderItem, item_index: int
     ) -> List[NormalizationChange]:
         # 仅在接受标准 SKU 后才做归一化；未接受任何 SKU 时不得改写任何字段
         if not item.sku_code:
@@ -296,6 +312,7 @@ class OrderProcessingOrchestrator:
         # 名称：登记别名或标准名的等价书写，属于不改变采购意图的确定性归一化
         if self._differs(item.material_name, item.matched_material_name):
             changes.append(NormalizationChange(
+                item_index=item_index,
                 field="material_name",
                 original_value=item.material_name,
                 standard_value=item.matched_material_name,
@@ -307,6 +324,7 @@ class OrderProcessingOrchestrator:
         # 规格：匹配已确认标准规格与原规格为等价书写时才归一化，绝不猜测规格
         if self._differs(item.specification, item.matched_specification):
             changes.append(NormalizationChange(
+                item_index=item_index,
                 field="specification",
                 original_value=item.specification,
                 standard_value=item.matched_specification,
@@ -366,33 +384,17 @@ class OrderProcessingOrchestrator:
             }
         
         action = confirmation.get("action")
-        if action == "confirm":
-            self.order_manager.update_order_status(
-                order_id,
-                OrderStatus.COMPLETED,
-                reason="manually_confirmed",
-            )
-            return {
-                "success": True,
-                "order_id": order_id,
-                "message": "订单已确认"
-            }
-        elif action == "reject":
-            self.order_manager.update_order_status(
-                order_id,
-                OrderStatus.FAILED,
-                reason="manually_rejected",
-            )
-            return {
-                "success": True,
-                "order_id": order_id,
-                "message": "订单已拒绝"
-            }
-        else:
+        if action not in {"confirm", "reject"}:
             return {
                 "success": False,
                 "message": "无效的确认操作"
             }
+        if not self.order_manager.review_order(order_id, action, confirmation.get("comment")):
+            return {"success": False, "order_id": order_id, "message": "订单已被处理，请刷新后查看"}
+        return {
+            "success": True, "order_id": order_id,
+            "message": "订单已确认" if action == "confirm" else "订单已拒绝",
+        }
     
     def get_order_status(self, order_id: str) -> Optional[Dict[str, Any]]:
         return self.order_manager.get_order_status(order_id)

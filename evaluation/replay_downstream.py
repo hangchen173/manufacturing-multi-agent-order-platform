@@ -101,9 +101,9 @@ def replay_order(orchestrator: Any, parsed_order: ParsedOrder, document_path: st
         document_type=Path(document_path).suffix.lstrip(".").lower() or None,
         order_text="",
     )
-    manager.update_parsed_order(order_id, parsed_order)
     # 模拟解析阶段已完成，使状态机允许进入 matching（PENDING 不能直接跳 MATCHING）
     manager.update_order_status(order_id, OrderStatus.PARSING, reason="downstream_replay")
+    manager.update_parsed_order(order_id, parsed_order)
 
     start = perf_counter()
     result = orchestrator._process_matching_phase(order_id, parsed_order)

@@ -2,10 +2,10 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Type, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Set, Type, TypeVar
 
 from config import Config
-from domain.exceptions import InvalidOrderStatusException, OrderNotFoundException
+from domain.exceptions import InvalidOrderStatusException
 from domain.models import FinalOrderResult, MatchedOrder, OrderStatus, ParsedOrder, RiskCheckResult
 from domain.order_state_machine import validate_transition
 from infrastructure.repositories import OrderRepository, PostgresOrderRepository
@@ -65,6 +65,8 @@ class OrderProcessingContext:
     risk_result: Optional[RiskCheckResult] = None
     final_result: Optional[FinalOrderResult] = None
     confirmation_requests: List[Dict[str, Any]] = field(default_factory=list)
+    review_actions: List[Dict[str, Any]] = field(default_factory=list)
+    processing_diagnostics: Dict[str, Any] = field(default_factory=dict)
     transition_history: List[OrderStatusTransition] = field(default_factory=list)
     error_message: Optional[str] = None
 
@@ -102,6 +104,8 @@ class OrderProcessingContext:
             "risk_result": _serialize_model(self.risk_result),
             "final_result": _serialize_model(self.final_result),
             "confirmation_requests": self.confirmation_requests,
+            "review_actions": self.review_actions,
+            "processing_diagnostics": self.processing_diagnostics,
             "transition_history": [item.to_dict() for item in self.transition_history],
             "error_message": self.error_message,
         }
@@ -126,6 +130,8 @@ class OrderProcessingContext:
             risk_result=_deserialize_model(RiskCheckResult, payload.get("risk_result")),
             final_result=_deserialize_model(FinalOrderResult, payload.get("final_result")),
             confirmation_requests=payload.get("confirmation_requests", []),
+            review_actions=payload.get("review_actions", []),
+            processing_diagnostics=payload.get("processing_diagnostics", {}),
             transition_history=transition_history,
             error_message=payload.get("error_message"),
         )
@@ -145,7 +151,6 @@ class OrderManager:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config = config or Config()
         self.repository = repository or PostgresOrderRepository(self.config.database.url)
-        self.orders: Dict[str, OrderProcessingContext] = self._load_orders()
         if self.config.data.order_auto_archive_days > 0:
             self.archive_terminal_orders(self.config.data.order_auto_archive_days)
 
@@ -158,12 +163,38 @@ class OrderManager:
 
         return orders
 
-    def _persist(self) -> None:
-        snapshots = {
-            order_id: context.to_snapshot()
-            for order_id, context in self.orders.items()
-        }
-        self.repository.save_all(snapshots, archived=False)
+    def _update(
+        self,
+        order_id: str,
+        mutate: Callable[[OrderProcessingContext], None],
+        expected_status: Optional[OrderStatus] = None,
+    ) -> bool:
+        context = self.get_order(order_id)
+        if context is None:
+            return False
+        if expected_status is not None and context.status != expected_status:
+            return False
+        expected_updated_at = context.updated_at.isoformat()
+        context.updated_at = max(datetime.now(), context.updated_at + timedelta(microseconds=1))
+        try:
+            mutate(context)
+        except InvalidOrderStatusException as exc:
+            self.logger.warning("更新订单失败: %s", exc)
+            return False
+        return self.repository.update(context.to_snapshot(), expected_updated_at)
+
+    @staticmethod
+    def _transition(context: OrderProcessingContext, status: OrderStatus, reason: Optional[str]) -> None:
+        validate_transition(context.status, status)
+        if context.status == status:
+            return
+        context.transition_history.append(OrderStatusTransition(
+            from_status=context.status, to_status=status,
+            timestamp=context.updated_at, reason=reason,
+        ))
+        context.status = status
+        if context.final_result is not None:
+            context.final_result.status = status
 
     def create_order(
         self,
@@ -192,155 +223,75 @@ class OrderManager:
             ],
         )
 
-        self.orders[order_id] = context
-        self._persist()
+        self.repository.create(context.to_snapshot())
         self.logger.info(f"创建订单: {order_id}")
         return order_id
 
     def _generate_order_id(self) -> str:
         return str(uuid.uuid4())
 
-    def _validate_order_exists(self, order_id: str) -> OrderProcessingContext:
-        if order_id not in self.orders:
-            raise OrderNotFoundException(
-                f"订单不存在: {order_id}",
-                details={"order_id": order_id},
-            )
-        return self.orders[order_id]
-
     def get_order(self, order_id: str) -> Optional[OrderProcessingContext]:
-        return self.orders.get(order_id)
+        snapshot = self.repository.get(order_id)
+        return OrderProcessingContext.from_snapshot(snapshot) if snapshot else None
 
     def update_order_status(
         self,
         order_id: str,
         status: OrderStatus,
         reason: Optional[str] = None,
+        expected_status: Optional[OrderStatus] = None,
     ) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
-            try:
-                validate_transition(context.status, status)
-            except InvalidOrderStatusException as exc:
-                raise InvalidOrderStatusException(
-                    order_id=order_id,
-                    current_status=context.status.value,
-                    expected_status=exc.expected_status,
-                ) from exc
-
-            previous_status = context.status
-            context.status = status
-            context.updated_at = datetime.now()
-            context.transition_history.append(
-                OrderStatusTransition(
-                    from_status=previous_status,
-                    to_status=status,
-                    timestamp=context.updated_at,
-                    reason=reason,
-                )
-            )
-
-            if context.final_result is not None:
-                context.final_result.status = status
-
-            self._persist()
-            self.logger.info(f"订单 {order_id} 状态更新为: {status.value}")
-            return True
-
-        except (OrderNotFoundException, InvalidOrderStatusException) as exc:
-            self.logger.warning("更新订单状态失败: %s", exc)
-            return False
+        return self._update(
+            order_id, lambda context: self._transition(context, status, reason), expected_status,
+        )
 
     def update_parsed_order(self, order_id: str, parsed_order: ParsedOrder) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
-            context.parsed_order = parsed_order
-            context.updated_at = datetime.now()
-            self._persist()
-
-            self.logger.info(f"订单 {order_id} 解析结果已更新")
-            return True
-
-        except OrderNotFoundException:
-            self.logger.warning(f"更新解析结果失败，订单不存在: {order_id}")
-            return False
+        return self._update(order_id, lambda context: setattr(context, "parsed_order", parsed_order), OrderStatus.PARSING)
 
     def update_matched_order(self, order_id: str, matched_order: MatchedOrder) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
-            context.matched_order = matched_order
-            context.updated_at = datetime.now()
-            self._persist()
-
-            self.logger.info(f"订单 {order_id} 匹配结果已更新")
-            return True
-
-        except OrderNotFoundException:
-            self.logger.warning(f"更新匹配结果失败，订单不存在: {order_id}")
-            return False
+        return self._update(order_id, lambda context: setattr(context, "matched_order", matched_order), OrderStatus.MATCHING)
 
     def update_risk_result(self, order_id: str, risk_result: RiskCheckResult) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
-            context.risk_result = risk_result
-            context.updated_at = datetime.now()
-            self._persist()
+        return self._update(order_id, lambda context: setattr(context, "risk_result", risk_result), OrderStatus.RISK_CHECKING)
 
-            self.logger.info(f"订单 {order_id} 风控结果已更新")
-            return True
+    def record_stage(self, order_id: str, stage: str, diagnostics: Dict[str, Any]) -> bool:
+        return self._update(order_id, lambda context: context.processing_diagnostics.update({stage: diagnostics}))
 
-        except OrderNotFoundException:
-            self.logger.warning(f"更新风控结果失败，订单不存在: {order_id}")
-            return False
-
-    def update_final_result(self, order_id: str, final_result: FinalOrderResult) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
+    def finalize_order(
+        self, order_id: str, final_result: FinalOrderResult,
+        confirmation_request: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        def mutate(context):
             context.final_result = final_result
-            context.updated_at = datetime.now()
-            self._persist()
+            if confirmation_request is not None:
+                context.confirmation_requests.append(confirmation_request)
+            reason = "requires_manual_confirmation" if final_result.status == OrderStatus.NEEDS_CONFIRMATION else "processing_completed"
+            self._transition(context, final_result.status, reason)
+        return self._update(order_id, mutate, OrderStatus.RISK_CHECKING)
 
-            self.logger.info(f"订单 {order_id} 最终结果已更新")
-            return True
-
-        except OrderNotFoundException:
-            self.logger.warning(f"更新最终结果失败，订单不存在: {order_id}")
+    def review_order(self, order_id: str, action: str, comment: Optional[str] = None) -> bool:
+        if action not in {"confirm", "reject"}:
             return False
+        def mutate(context):
+            target = OrderStatus.COMPLETED if action == "confirm" else OrderStatus.FAILED
+            reason = "manually_confirmed" if action == "confirm" else "manually_rejected"
+            self._transition(context, target, reason)
+            context.review_actions.append({
+                "action": action, "comment": comment,
+                "timestamp": context.updated_at.isoformat(),
+            })
+        return self._update(order_id, mutate, OrderStatus.NEEDS_CONFIRMATION)
 
     def set_error(self, order_id: str, error_message: str) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
+        current = self.get_order(order_id)
+        if current is None or current.status not in {
+            OrderStatus.PENDING, OrderStatus.PARSING, OrderStatus.MATCHING, OrderStatus.RISK_CHECKING,
+        }:
+            return False
+        def mutate(context):
             context.error_message = error_message
-            updated = self.update_order_status(
-                order_id,
-                OrderStatus.FAILED,
-                reason=f"error:{error_message}",
-            )
-            if not updated:
-                return False
-            context.updated_at = datetime.now()
-            self._persist()
-
-            self.logger.error(f"订单 {order_id} 发生错误: {error_message}")
-            return True
-
-        except OrderNotFoundException:
-            self.logger.warning(f"设置错误状态失败，订单不存在: {order_id}")
-            return False
-
-    def add_confirmation_request(self, order_id: str, request: Dict[str, Any]) -> bool:
-        try:
-            context = self._validate_order_exists(order_id)
-            context.confirmation_requests.append(request)
-            context.updated_at = datetime.now()
-            self._persist()
-
-            self.logger.info(f"订单 {order_id} 添加确认请求")
-            return True
-
-        except OrderNotFoundException:
-            self.logger.warning(f"添加确认请求失败，订单不存在: {order_id}")
-            return False
+            self._transition(context, OrderStatus.FAILED, f"error:{error_message}")
+        return self._update(order_id, mutate, current.status)
 
     def get_order_status(self, order_id: str) -> Optional[Dict[str, Any]]:
         order = self.get_order(order_id)
@@ -352,8 +303,9 @@ class OrderManager:
             "status": order.status.value,
             "created_at": order.created_at.isoformat(),
             "updated_at": order.updated_at.isoformat(),
-            "needs_confirmation": len(order.confirmation_requests) > 0,
+            "needs_confirmation": order.status == OrderStatus.NEEDS_CONFIRMATION,
             "confirmation_requests": order.confirmation_requests,
+            "review_actions": order.review_actions,
             "error_message": order.error_message,
             "has_final_result": order.final_result is not None,
             "transition_history": [item.to_dict() for item in order.transition_history],
@@ -369,16 +321,16 @@ class OrderManager:
         return [
             context.to_dict()
             for context in sorted(
-                self.orders.values(), key=lambda context: context.created_at, reverse=True
+                self._load_orders().values(), key=lambda context: context.created_at, reverse=True
             )
         ]
 
     def get_all_orders(self) -> Dict[str, OrderProcessingContext]:
-        return self.orders.copy()
+        return self._load_orders()
 
     def get_orders_by_status(self, status: OrderStatus) -> List[OrderProcessingContext]:
         return [
-            context for context in self.orders.values()
+            context for context in self._load_orders().values()
             if context.status == status
         ]
 
@@ -392,22 +344,18 @@ class OrderManager:
         return self.get_orders_by_status(OrderStatus.NEEDS_CONFIRMATION)
 
     def delete_order(self, order_id: str) -> bool:
-        if order_id in self.orders:
-            del self.orders[order_id]
-            self._persist()
-            self.logger.info(f"删除订单: {order_id}")
-            return True
-        return False
+        context = self.get_order(order_id)
+        return bool(context and self.repository.delete(order_id, context.updated_at.isoformat()))
 
     def get_order_count(self) -> int:
-        return len(self.orders)
+        return self.repository.load_index()["total_count"]
 
     def clear_completed_orders(self) -> int:
         completed_orders = self.get_orders_by_status(OrderStatus.COMPLETED)
         count = 0
 
         for context in completed_orders:
-            if self.delete_order(context.order_id):
+            if self.repository.delete(context.order_id, context.updated_at.isoformat()):
                 count += 1
 
         self.logger.info(f"清理了 {count} 个已完成订单")
@@ -423,31 +371,11 @@ class OrderManager:
 
         statuses = statuses or {OrderStatus.COMPLETED, OrderStatus.FAILED}
         cutoff = datetime.now() - timedelta(days=older_than_days)
-        order_ids_to_archive = [
-            order_id
-            for order_id, context in self.orders.items()
+        return sum(
+            self.repository.archive(order_id, context.updated_at.isoformat())
+            for order_id, context in self._load_orders().items()
             if context.status in statuses and context.updated_at <= cutoff
-        ]
-        if not order_ids_to_archive:
-            return 0
-
-        archived_snapshots = {
-            order_id: self.orders[order_id].to_snapshot()
-            for order_id in order_ids_to_archive
-        }
-        active_snapshots = {
-            order_id: context.to_snapshot()
-            for order_id, context in self.orders.items()
-            if order_id not in archived_snapshots
-        }
-
-        self.repository.archive_orders(archived_snapshots, active_snapshots)
-
-        for order_id in order_ids_to_archive:
-            del self.orders[order_id]
-
-        self.logger.info("归档了 %s 个历史订单", len(order_ids_to_archive))
-        return len(order_ids_to_archive)
+        )
 
     def get_storage_summary(self) -> Dict[str, Any]:
         active_index = self.repository.load_index(archived=False)
@@ -456,3 +384,18 @@ class OrderManager:
             "active": active_index,
             "archived": archived_index,
         }
+
+    def fail_stale_processing_orders(self, older_than_seconds: int = 180) -> int:
+        cutoff = datetime.now() - timedelta(seconds=older_than_seconds)
+        count = 0
+        for context in self._load_orders().values():
+            if context.status not in {
+                OrderStatus.PENDING, OrderStatus.PARSING, OrderStatus.MATCHING, OrderStatus.RISK_CHECKING,
+            } or context.updated_at > cutoff:
+                continue
+            expected = context.updated_at.isoformat()
+            context.updated_at = datetime.now()
+            context.error_message = "处理超时或服务中断，请重新提交订单"
+            self._transition(context, OrderStatus.FAILED, "processing_interrupted_or_expired")
+            count += self.repository.update(context.to_snapshot(), expected)
+        return count

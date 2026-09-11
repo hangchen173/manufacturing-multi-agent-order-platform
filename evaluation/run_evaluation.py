@@ -27,6 +27,7 @@ from domain.constants import (
     SUPPORTED_EXCEL_EXTENSIONS,
     SUPPORTED_IMAGE_EXTENSIONS,
     SUPPORTED_PDF_EXTENSIONS,
+    SUPPORTED_TEXT_EXTENSIONS,
 )
 from evaluation.metrics import EvaluationAccumulator, build_summary_markdown, safe_divide
 from evaluation.contracts import normalize_annotation
@@ -35,7 +36,7 @@ from interfaces.http.serializers import to_jsonable
 
 
 SUPPORTED_EVAL_EXTENSIONS = (
-    SUPPORTED_PDF_EXTENSIONS | SUPPORTED_EXCEL_EXTENSIONS | SUPPORTED_IMAGE_EXTENSIONS
+    SUPPORTED_PDF_EXTENSIONS | SUPPORTED_EXCEL_EXTENSIONS | SUPPORTED_IMAGE_EXTENSIONS | SUPPORTED_TEXT_EXTENSIONS
 )
 
 MANIFEST_FILE = "run_manifest.json"
@@ -242,6 +243,8 @@ def summarize_attempts(attempts: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     total_latency_ms = 0.0
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    usage_missing_attempts = 0
+    usage_missing_calls = 0
     first_attempt_success = 0
     final_success = 0
     retried_documents = 0
@@ -261,6 +264,11 @@ def summarize_attempts(attempts: List[Dict[str, Any]]) -> Dict[str, Any]:
         for row in document_attempts:
             total_latency_ms += float(row.get("latency_ms") or 0.0)
             usage = row.get("usage") or {}
+            attempted_calls = usage.get("attempted_calls")
+            missing_calls = max(0, attempted_calls - usage.get("reported_calls", 0)) if attempted_calls is not None else None
+            if missing_calls is None or missing_calls > 0:
+                usage_missing_attempts += 1
+            usage_missing_calls += missing_calls or 0
             for key in total_usage:
                 total_usage[key] += int(usage.get(key) or 0)
 
@@ -277,6 +285,8 @@ def summarize_attempts(attempts: List[Dict[str, Any]]) -> Dict[str, Any]:
         "retry_success_rate": safe_divide(retry_success, retried_documents),
         "total_latency_ms": total_latency_ms,
         "total_usage": total_usage,
+        "usage_missing_attempts": usage_missing_attempts,
+        "usage_missing_calls": usage_missing_calls,
     }
 
 
@@ -424,15 +434,20 @@ def build_run_identity(
     index_path = Path(config.data.faiss_index_path)
     return {
         "code_version": _git_output("rev-parse", "HEAD") or None,
-        # 排除评测结果目录，避免运行产物回流改变工作区指纹
-        "workspace_state": hashlib.sha256(
-            _git_output(
-                "status", "--porcelain", "--", ".", ":(exclude)evaluation/results"
-            ).encode("utf-8")
-        ).hexdigest(),
+        "workspace_state": fingerprint_files(
+            [PROJECT_ROOT / "config.py", PROJECT_ROOT / "requirements.txt"]
+            + [path for directory in ("application", "domain", "infrastructure", "interfaces", "evaluation")
+               for path in (PROJECT_ROOT / directory).rglob("*.py")]
+        ),
         "prompt_fingerprint": prompt_fingerprint(),
         "model_config": {
             "model": config.model.model,
+            "base_url": config.model.base_url,
+            "enable_thinking": False,
+            "temperature": 0,
+            "max_tokens": 4096,
+            "timeout_seconds": 60,
+            "sdk_retries": 0,
             "match_threshold": config.risk.match_threshold,
             "confidence_threshold": config.risk.confidence_threshold,
             "evaluation_as_of": config.risk.evaluation_as_of,
@@ -469,39 +484,20 @@ def describe_identity_mismatch(
 
 
 def validate_material_index(config: Config) -> None:
-    materials_path = Path(config.data.standard_materials_path)
+    import faiss
+    from infrastructure.vector_store.catalog import load_material_catalog, validate_catalog_index
+
     index_path = Path(config.data.faiss_index_path)
     metadata_path = index_path / "metadata.pkl"
     index_file = index_path / "index.faiss"
-    required_paths = (materials_path, metadata_path, index_file)
-    missing = [str(path) for path in required_paths if not path.is_file()]
-    if missing:
-        raise SystemExit(f"Material/index artifacts missing: {', '.join(missing)}")
-
-    with materials_path.open("r", encoding="utf-8") as file:
-        materials = list(csv.DictReader(file))
-    with metadata_path.open("rb") as file:
-        metadata = pickle.load(file)
-    if not isinstance(metadata, list):
-        raise SystemExit("FAISS metadata must be a list")
-
-    material_by_sku = {row.get("sku_code"): row for row in materials}
-    index_by_sku = {row.get("sku_code"): row for row in metadata}
-    if len(material_by_sku) != len(materials) or len(index_by_sku) != len(metadata):
-        raise SystemExit("Duplicate SKU found in material CSV or FAISS metadata")
-    if set(material_by_sku) != set(index_by_sku):
-        raise SystemExit("Material CSV and FAISS metadata SKU sets are inconsistent")
-    for sku_code, material in material_by_sku.items():
-        indexed = index_by_sku[sku_code]
-        for field in ("material_name", "specification", "unit", "category"):
-            if str(material.get(field, "")) != str(indexed.get(field, "")):
-                raise SystemExit(f"Material/index mismatch for {sku_code}: {field}")
-        if float(material["reference_price"]) != float(indexed["reference_price"]):
-            raise SystemExit(f"Material/index mismatch for {sku_code}: reference_price")
-        # aliases 参与 MatchingAgent 的名称兼容性判断，索引缺失会让别名输入被误拒识
-        alias = (material.get("aliases") or "").strip()
-        if list(indexed.get("aliases") or []) != ([alias] if alias else []):
-            raise SystemExit(f"Material/index mismatch for {sku_code}: aliases")
+    try:
+        documents = load_material_catalog(config.data.standard_materials_path)
+        with metadata_path.open("rb") as file:
+            metadata = pickle.load(file)
+        index = faiss.read_index(str(index_file))
+        validate_catalog_index(documents, metadata, index)
+    except Exception as exc:
+        raise SystemExit(f"Material/index validation failed: {exc}") from exc
 
 
 def run_concurrent_evaluation(
@@ -604,6 +600,21 @@ def run() -> int:
             f"{len(documents)} / {len(all_documents)} documents"
         )
 
+    manifest_payload = {
+        "dataset_name": dataset_name,
+        "input_dir": str(input_dir),
+        "annotation_dir": str(annotation_dir) if annotation_dir else None,
+        "manifest_csv": str(manifest_csv) if manifest_csv else None,
+        "sample_count": len(all_documents),
+        "evaluated_this_run": len(documents),
+        "resumed": resumed,
+        "concurrency": worker_count,
+        "generated_at": datetime.now().isoformat(),
+        "run_dir": str(run_dir),
+        "run_identity": identity,
+        "identity_hash": current_identity_hash,
+    }
+    write_json(run_dir / MANIFEST_FILE, manifest_payload)
     attempt_writer = AttemptWriter(run_dir / ATTEMPTS_FILE)
     attempt_counter = next_attempt_index(prior_attempts)
     counter_lock = threading.Lock()
@@ -686,22 +697,6 @@ def run() -> int:
     write_jsonl(run_dir / PREDICTIONS_FILE, final_rows)
     write_json(run_dir / FAILURES_FILE, final_failures)
     (run_dir / SUMMARY_MARKDOWN_FILE).write_text(markdown, encoding="utf-8")
-
-    manifest_payload = {
-        "dataset_name": dataset_name,
-        "input_dir": str(input_dir),
-        "annotation_dir": str(annotation_dir) if annotation_dir else None,
-        "manifest_csv": str(manifest_csv) if manifest_csv else None,
-        "sample_count": len(all_documents),
-        "evaluated_this_run": len(documents),
-        "resumed": resumed,
-        "concurrency": worker_count,
-        "generated_at": datetime.now().isoformat(),
-        "run_dir": str(run_dir),
-        "run_identity": identity,
-        "identity_hash": current_identity_hash,
-    }
-    write_json(run_dir / MANIFEST_FILE, manifest_payload)
 
     print(f"Evaluation completed: {run_dir}")
     print(f"Summary: {run_dir / SUMMARY_MARKDOWN_FILE}")

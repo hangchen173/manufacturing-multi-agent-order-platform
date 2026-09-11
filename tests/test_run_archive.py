@@ -1,6 +1,10 @@
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from evaluation import run_evaluation as runner
 
 from evaluation.run_evaluation import (
     AttemptWriter,
@@ -68,6 +72,14 @@ class FinalSelectionTests(unittest.TestCase):
 
 
 class AttemptSummaryTests(unittest.TestCase):
+    def test_partial_reported_usage_still_marks_unknown_call(self):
+        attempt = _row("doc-1", 1, False)
+        attempt["usage"].update(attempted_calls=2, reported_calls=1)
+        summary = summarize_attempts([attempt])
+        self.assertEqual(summary["usage_missing_attempts"], 1)
+        self.assertEqual(summary["usage_missing_calls"], 1)
+        self.assertEqual(summary["total_usage"]["total_tokens"], 20)
+
     def test_reports_first_retry_and_cumulative_cost_separately(self):
         attempts = [
             _row("doc-1", 1, True, latency_ms=2.0, tokens=5),
@@ -102,6 +114,52 @@ class IdentityMismatchTests(unittest.TestCase):
 
     def test_missing_prior_identity_blocks_resume(self):
         self.assertIsNotNone(describe_identity_mismatch(None, {"prompt_fingerprint": "a"}))
+
+
+class RunRecoveryTests(unittest.TestCase):
+    def test_interrupted_first_run_resumes_without_repeating_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            inputs = root / "inputs"
+            inputs.mkdir()
+            for name in ("a.pdf", "b.pdf"):
+                (inputs / name).touch()
+            args = SimpleNamespace(
+                input_dir=str(inputs), annotation_dir=None, manifest_csv=None,
+                dataset_name="recovery", output_dir=str(root / "out"),
+                no_recursive=False, limit=None, concurrency=1, resume_run=None,
+            )
+            seen = []
+
+            def evaluate(**kwargs):
+                document = kwargs["document_path"]
+                seen.append(document.stem)
+                if len(seen) == 2:
+                    raise KeyboardInterrupt()
+                return dict(document_id=document.stem, success=True, latency_ms=1,
+                            prediction={"success": True}, needs_confirmation=False)
+
+            with patch.object(runner, "parse_args", return_value=args), \
+                 patch.object(runner, "validate_material_index"), \
+                 patch.object(runner, "build_run_identity", return_value={"code": "fixed"}), \
+                 patch.object(runner, "create_evaluation_orchestrator"), \
+                 patch.object(runner, "evaluate_document", side_effect=evaluate):
+                with self.assertRaises(KeyboardInterrupt):
+                    runner.run()
+                run_dir = next((root / "out").iterdir())
+                self.assertTrue((run_dir / runner.MANIFEST_FILE).is_file())
+                args.resume_run = str(run_dir)
+                self.assertEqual(runner.run(), 0)
+            self.assertEqual(seen, ["a", "b", "b"])
+            self.assertEqual(len(runner.load_attempts(run_dir)), 2)
+
+    def test_content_hash_changes_without_file_status_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "source.py"
+            path.write_text("value = 1\n")
+            before = runner.fingerprint_files([path])
+            path.write_text("value = 2\n")
+            self.assertNotEqual(before, runner.fingerprint_files([path]))
 
 
 if __name__ == "__main__":

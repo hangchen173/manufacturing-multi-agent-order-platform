@@ -101,6 +101,8 @@ class EvaluationAccumulator:
     auto_handle_counter: FieldCounter = field(default_factory=FieldCounter)
     # total = 金标需要人工复核的样本，matched = 预测也要求人工复核。
     manual_review_recall_counter: FieldCounter = field(default_factory=FieldCounter)
+    manual_review_failures: int = 0
+    manual_review_wrong_releases: int = 0
 
     def record_sample(
         self,
@@ -135,10 +137,15 @@ class EvaluationAccumulator:
     def _record_annotated_metrics(
         self, annotation: Dict[str, Any], prediction: Optional[Dict[str, Any]]
     ) -> None:
-        # 技术失败的样本没有预测结果：计入全样本内容正确率分母并记为不正确，
-        # 但不计入自动放行/自动处理等只在有动作结果时才成立的指标。
+        # 技术失败进入全样本覆盖率与风险召回分母，不视为一次放行动作。
         if prediction is None:
             self.content_exact_counter.add(False)
+            action = (annotation.get("business_decision") or {}).get("action")
+            if action:
+                self.auto_handle_counter.add(False)
+            if action == "manual_review":
+                self.manual_review_recall_counter.add(False)
+                self.manual_review_failures += 1
             return
 
         predicted_final = prediction.get("final_result") or {}
@@ -222,6 +229,7 @@ class EvaluationAccumulator:
             self.auto_handle_counter.add(is_auto)
             if expected_action == "manual_review":
                 self.manual_review_recall_counter.add(actual_action == "manual_review")
+                self.manual_review_wrong_releases += int(is_auto)
 
     def to_dict(self) -> Dict[str, Any]:
         summary = {
@@ -256,6 +264,12 @@ class EvaluationAccumulator:
             "content_exact_match_success_only": self.content_exact_success_counter.to_dict(),
             "auto_handle_coverage": self.auto_handle_counter.to_dict(),
             "manual_review_recall": self.manual_review_recall_counter.to_dict(),
+            "risk_order_outcomes": {
+                "total": self.manual_review_recall_counter.total,
+                "sent_to_review": self.manual_review_recall_counter.matched,
+                "wrongly_released": self.manual_review_wrong_releases,
+                "technical_failures": self.manual_review_failures,
+            },
             "error_auto_release": {
                 "error_count": (
                     self.auto_release_counter.total - self.auto_release_counter.matched
@@ -322,7 +336,7 @@ def build_summary_markdown(
         f"- Avg latency: {summary['avg_latency_ms']:.2f} ms",
         f"- Needs confirmation rate: {summary['needs_confirmation_rate']:.2%}",
         "",
-        "## Order-Level Accuracy",
+        "## Order-Level Accuracy (Successful Samples Only)",
         "",
     ]
 
@@ -332,7 +346,7 @@ def build_summary_markdown(
     lines.extend(
         [
             "",
-            "## Item-Level Accuracy",
+            "## Item-Level Accuracy (Successful Samples Only)",
             "",
         ]
     )
@@ -376,11 +390,13 @@ def build_summary_markdown(
             "## Scoring Rules",
             "",
             "- 行对齐：标签与预测按行序号一一对齐；标签有金标 SKU 而预测缺行时该行记为 SKU 错误。",
-            "- 额外行：预测行数多于标签时，多出的行参与字段与 SKU 比较，任一不符即计入错误。",
+            "- 额外行：使行数与整单内容判错；没有对应字段标注，不进入字段/SKU 条件准确率分母。",
             "- 漏行：标签行数多于预测时，缺失行按空预测参与比较，字段与 SKU 均记错。",
             "- 内容正确：订单级字段、明细字段、行数与 SKU 全部命中才算整单内容正确。",
             "- 口径：全样本指标（含技术失败）与技术成功后的条件指标分开展示；分母为 0 的指标显示 N/A。",
-            "- 技术失败不算自动放行，不计入自动放行相关指标的分母。",
+            "- 技术失败不算自动放行；计入全样本内容正确率、自动处理覆盖率及风险订单结果的分母。",
+            "- 字段、SKU、动作准确率条件于技术成功；风险召回分母含全部有风险动作标注的订单。",
+            f"- Risk order outcomes: {summary['risk_order_outcomes']}",
         ]
     )
 
@@ -410,10 +426,11 @@ def build_summary_markdown(
                 ),
                 f"- Total latency: {attempts['total_latency_ms']:.2f} ms",
                 (
-                    f"- Total tokens: {int(usage.get('total_tokens', 0))} "
+                    f"- Reported tokens: {int(usage.get('total_tokens', 0))} "
                     f"(prompt {int(usage.get('prompt_tokens', 0))}, "
                     f"completion {int(usage.get('completion_tokens', 0))})"
                 ),
+                f"- Attempts with unknown token usage: {attempts.get('usage_missing_attempts', 0)}",
             ]
         )
 

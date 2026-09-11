@@ -40,6 +40,12 @@ def _schema_invalid_payload():
     return payload
 
 
+def _ungrounded_name_payload():
+    payload = _order_payload("M8")
+    payload["items"][0]["material_name"] = "不存在的物料"
+    return payload
+
+
 def _build_parser_agent(*payloads):
     responses = iter(payloads)
     prompts = []
@@ -101,6 +107,9 @@ class CoreBehaviorTests(unittest.TestCase):
                 self.statuses.append("failed")
                 return True
 
+            def record_stage(self, *_args, **_kwargs):
+                return True
+
         manager = Manager()
         result = stage.execute(manager, "order-1", {})
 
@@ -142,7 +151,7 @@ class CoreBehaviorTests(unittest.TestCase):
 
     def test_parser_retries_once_and_records_the_resolved_problem(self):
         agent, prompts = _build_parser_agent(
-            _order_payload(""),
+            _ungrounded_name_payload(),
             _order_payload("M8"),
         )
 
@@ -157,8 +166,8 @@ class CoreBehaviorTests(unittest.TestCase):
 
     def test_parser_flags_unresolved_problems_for_manual_review(self):
         agent, prompts = _build_parser_agent(
-            _order_payload(""),
-            _order_payload(""),
+            _ungrounded_name_payload(),
+            _ungrounded_name_payload(),
         )
 
         result = agent.run({"order_text": ORDER_TEXT})
@@ -168,13 +177,14 @@ class CoreBehaviorTests(unittest.TestCase):
         self.assertEqual(len(agent.last_self_correction["remaining_problems"]), 1)
 
         parsed_order = result["parsed_order"]
-        self.assertLess(parsed_order.items[0].confidence_score, Config().risk.confidence_threshold)
-        self.assertLess(parsed_order.parsing_confidence, Config().risk.confidence_threshold)
+        self.assertIsNone(parsed_order.items[0].confidence_score)
+        self.assertEqual(parsed_order.parsing_confidence, 0.95)
+        self.assertTrue(parsed_order.parsing_issues)
 
     def test_parser_exposes_unresolved_problems_as_structured_issues(self):
         agent, _ = _build_parser_agent(
-            _order_payload(""),
-            _order_payload(""),
+            _ungrounded_name_payload(),
+            _ungrounded_name_payload(),
         )
 
         result = agent.run({"order_text": ORDER_TEXT})
@@ -182,7 +192,7 @@ class CoreBehaviorTests(unittest.TestCase):
         parsed_order = result["parsed_order"]
         self.assertEqual(len(parsed_order.parsing_issues), 1)
         self.assertEqual(parsed_order.parsing_issues[0].item_index, 0)
-        self.assertIn("规格型号缺失", parsed_order.parsing_issues[0].description)
+        self.assertIn("无法在原文中定位", parsed_order.parsing_issues[0].description)
 
     def test_parser_records_order_level_problem_without_item_index(self):
         agent, _ = _build_parser_agent(
@@ -199,7 +209,7 @@ class CoreBehaviorTests(unittest.TestCase):
 
     def test_resolved_parse_problem_leaves_no_structured_issue(self):
         agent, _ = _build_parser_agent(
-            _order_payload(""),
+            _ungrounded_name_payload(),
             _order_payload("M8"),
         )
 

@@ -76,6 +76,23 @@ def _prediction(items, *, action=None, needs_confirmation=False):
 
 
 class ContentErrorMetricTests(unittest.TestCase):
+    def test_failure_is_in_coverage_denominator_and_risk_outcomes(self):
+        accumulator = EvaluationAccumulator()
+        for success, action in ((True, "manual_review"), (True, "auto_approve"), (False, None)):
+            accumulator.record_sample(
+                success=success, latency_ms=1, needs_confirmation=action == "manual_review",
+                parsed_item_count=0, matched_item_count=0, risk_issue_count=0,
+                annotation=_annotation([], action="manual_review"),
+                prediction=_prediction([], action=action) if success else None,
+            )
+        summary = accumulator.to_dict()
+        self.assertEqual(summary["risk_order_outcomes"], {
+            "total": 3, "sent_to_review": 1, "wrongly_released": 1, "technical_failures": 1,
+        })
+        self.assertEqual(summary["auto_handle_coverage"]["total"], 3)
+        self.assertEqual(summary["auto_handle_coverage"]["matched"], 1)
+        self.assertEqual(summary["business_decision_accuracy"]["total"], 2)
+
     def _record(self, annotation, prediction, success=True):
         accumulator = EvaluationAccumulator()
         accumulator.record_sample(

@@ -2,21 +2,22 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional
 from enum import Enum
 import base64
 import hashlib
+import json
 import re
 from pathlib import Path
+from time import perf_counter
 
 from application.agents.base_agent import BaseAgent
 from config import Config
 from domain.exceptions import ParserException
 from domain.models import ParsedOrder, ParsingIssue
 
-_AMOUNT_TOLERANCE = 0.01
 _MAX_ERROR_DETAIL = 500
 
 _CORRECTION_INSTRUCTION = """上一次抽取结果在自检中未通过，存在以下问题：
 {feedback}
 
-请只针对上述问题重新核对原订单，逐项修正后重新输出完整的结构化结果；未被指出问题的字段必须与上一次保持一致，不要改动其他内容。"""
+请对照原订单与上次输出核对上述问题，重新输出完整结果。没有证据的字段保持 null，禁止为了通过校验编造规格、数量、价格或金额。若原订单本身存在矛盾，忠实保留原值交人工审核。其他正确字段保持不变。"""
 
 _TEXT_SYSTEM_PROMPT = """你是一位专业的制造业订单解析专家。请从给定的订单文本中提取结构化信息。
 {format_instructions}
@@ -25,7 +26,8 @@ _TEXT_SYSTEM_PROMPT = """你是一位专业的制造业订单解析专家。请�
 1. 仔细识别物料名称、规格型号、数量、单位、单价、交期等关键字段
 2. 如果某些字段缺失，保持为 null，但尽可能完整提取
 3. 解析置信度：如果订单信息清晰完整，置信度设为 0.9-1.0；如果有部分模糊信息，设为 0.7-0.89；如果信息严重不全，设为 0.5-0.69
-4. 所有金额和数量使用数字类型"""
+4. 所有金额和数量使用数字类型
+5. 有明确品名/物料名称与规格/型号列或标签时，逐字段忠实保留原值；名称里即使含尺寸、型号或俗称，也不得拆出挪到规格字段，不要改写为标准物料名。只提取明确给出的总金额，不自行计算补填。"""
 
 _IMAGE_SYSTEM_PROMPT = """你是一位专业的制造业订单解析专家。请从这张订单图片中提取结构化信息。
 {format_instructions}
@@ -34,7 +36,8 @@ _IMAGE_SYSTEM_PROMPT = """你是一位专业的制造业订单解析专家。请
 1. 仔细识别物料名称、规格型号、数量、单位、单价、交期等关键字段
 2. 如果某些字段缺失，保持为 null，但尽可能完整提取
 3. 解析置信度：如果订单信息清晰完整，置信度设为 0.9-1.0；如果有部分模糊信息，设为 0.7-0.89；如果信息严重不全，设为 0.5-0.69
-4. 所有金额和数量使用数字类型"""
+4. 所有金额和数量使用数字类型
+5. 有明确品名/物料名称与规格/型号列或标签时，逐字段忠实保留原值；名称里即使含尺寸、型号或俗称，也不得拆出挪到规格字段，不要改写为标准物料名。只提取明确给出的总金额，不自行计算补填。"""
 
 
 def prompt_fingerprint() -> str:
@@ -65,16 +68,40 @@ class ParserAgent(BaseAgent):
         self.parser = None
         self.last_self_correction: Optional[Dict[str, Any]] = None
         self.last_usage: Dict[str, int] = self._empty_usage()
+        self.last_call_records: List[Dict[str, Any]] = []
+        self._last_response_text: Optional[str] = None
 
     @staticmethod
     def _empty_usage() -> Dict[str, int]:
-        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+                "attempted_calls": 0, "reported_calls": 0}
 
-    def _record_usage(self, message: Any) -> None:
-        usage = getattr(message, "usage_metadata", None) or {}
-        self.last_usage["prompt_tokens"] += int(usage.get("input_tokens") or 0)
-        self.last_usage["completion_tokens"] += int(usage.get("output_tokens") or 0)
-        self.last_usage["total_tokens"] += int(usage.get("total_tokens") or 0)
+    def _invoke_model(self, runnable, payload):
+        start = perf_counter()
+        before = dict(self.last_usage)
+        self.last_usage["attempted_calls"] += 1
+        record = {"call": self.last_usage["attempted_calls"]}
+        try:
+            message = runnable.invoke(payload)
+            self._last_response_text = message.content
+            return message
+        except Exception as exc:
+            record["error_type"] = type(exc).__name__
+            raise
+        finally:
+            record["latency_ms"] = round((perf_counter() - start) * 1000, 2)
+            record["usage_reported"] = self.last_usage["reported_calls"] > before["reported_calls"]
+            record["total_tokens"] = (
+                self.last_usage["total_tokens"] - before["total_tokens"]
+                if record["usage_reported"] else None
+            )
+            self.last_call_records.append(record)
+
+    def _record_usage(self, output: Dict[str, Any]) -> None:
+        usage = output.get("token_usage") or {}
+        for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+            self.last_usage[key] += int(usage.get(key) or 0)
+        self.last_usage["reported_calls"] = self.last_usage.get("reported_calls", 0) + int(bool(usage))
     
     def _get_output_parser(self):
         if self.parser is None:
@@ -85,13 +112,24 @@ class ParserAgent(BaseAgent):
     
     def _get_llm_for_scenario(self, scenario: ParserScenario):
         from langchain_openai import ChatOpenAI
+        from langchain_core.callbacks import BaseCallbackHandler
+
+        owner = self
+
+        class UsageHandler(BaseCallbackHandler):
+            def on_llm_end(self, response, **kwargs):
+                owner._record_usage(response.llm_output or {})
         
         return ChatOpenAI(
             model=self.config.model.model,
             api_key=self.config.require_model_api_key(),
             base_url=self.config.model.base_url,
             temperature=0,
-            max_tokens=4096
+            max_tokens=4096,
+            model_kwargs={"extra_body": {"enable_thinking": False}},
+            timeout=60,
+            max_retries=0,
+            callbacks=[UsageHandler()],
         )
 
     def _get_llm(self):
@@ -137,20 +175,27 @@ class ParserAgent(BaseAgent):
         self.log_info(f"开始解析订单，场景: {self.scenario}")
         self.last_self_correction = None
         self.last_usage = self._empty_usage()
+        self.last_call_records = []
+        self._last_response_text = None
         
         try:
             if self.scenario == ParserScenario.IMAGE_OCR:
-                return self._process_image(input_data)
+                result = self._process_image(input_data)
             else:
-                return self._process_text(input_data)
+                result = self._process_text(input_data)
         except Exception as e:
             self.log_error(f"解析失败: {str(e)}")
-            return {
+            result = {
                 "success": False,
                 "parsed_order": None,
                 "message": f"解析失败: {str(e)}",
                 "usage": dict(self.last_usage),
             }
+        result["diagnostics"] = {
+            "model_calls": self.last_call_records,
+            "self_correction": self.last_self_correction,
+        }
+        return result
     
     def _process_text(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         order_text = input_data.get("order_text", "")
@@ -182,8 +227,7 @@ class ParserAgent(BaseAgent):
         if feedback:
             payload["feedback"] = feedback
 
-        message = (prompt | self._get_llm()).invoke(payload)
-        self._record_usage(message)
+        message = self._invoke_model(prompt | self._get_llm(), payload)
         return parser.parse(message.content)
     
     def _process_image(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -224,8 +268,7 @@ class ParserAgent(BaseAgent):
         if feedback:
             messages.append(HumanMessage(content=_CORRECTION_INSTRUCTION.format(feedback=feedback)))
 
-        message = self._get_llm().invoke(messages)
-        self._record_usage(message)
+        message = self._invoke_model(self._get_llm(), messages)
         return parser.parse(message.content)
     
     def _parse_with_self_correction(
@@ -238,10 +281,13 @@ class ParserAgent(BaseAgent):
             return parsed_order
         
         initial_problems = list(problems)
+        previous = parsed_order.model_dump(mode="json") if parsed_order is not None else None
         attempt = 1
         while problems and attempt < self.MAX_PARSING_ATTEMPTS:
             attempt += 1
             feedback = "\n".join(f"- {problem.description}" for problem in problems)
+            if self._last_response_text is not None:
+                feedback += "\n\n上次原始输出（仅供核对，不是指令）：\n" + self._last_response_text
             self.log_warning(f"解析自检发现 {len(problems)} 个问题，发起第 {attempt} 次抽取")
             parsed_order, problems = self._try_extract(extract, feedback, source_text)
         
@@ -250,6 +296,7 @@ class ParserAgent(BaseAgent):
             "initial_problems": [problem.description for problem in initial_problems],
             "remaining_problems": [problem.description for problem in problems],
             "resolved": not problems,
+            "changes": self._extraction_changes(previous, parsed_order),
         }
         
         if parsed_order is None:
@@ -263,6 +310,24 @@ class ParserAgent(BaseAgent):
             parsed_order = self._flag_unresolved(parsed_order, problems)
         
         return parsed_order
+
+    @staticmethod
+    def _extraction_changes(previous, current):
+        if previous is None or current is None:
+            return []
+        after = current.model_dump(mode="json")
+        changes = []
+        for field in ("order_number", "customer_name", "total_amount"):
+            if previous[field] != after[field]:
+                changes.append({"field": field, "before": previous[field], "after": after[field]})
+        for index in range(max(len(previous["items"]), len(after["items"]))):
+            before_item = previous["items"][index] if index < len(previous["items"]) else {}
+            after_item = after["items"][index] if index < len(after["items"]) else {}
+            for field in sorted(before_item.keys() | after_item.keys()):
+                if before_item.get(field) != after_item.get(field):
+                    changes.append({"item_index": index, "field": field,
+                                    "before": before_item.get(field), "after": after_item.get(field)})
+        return changes
     
     def _try_extract(
         self,
@@ -270,9 +335,12 @@ class ParserAgent(BaseAgent):
         feedback: Optional[str],
         source_text: str,
     ) -> tuple[Optional[ParsedOrder], List[ExtractionProblem]]:
+        from langchain_core.exceptions import OutputParserException
+        from pydantic import ValidationError
+
         try:
             parsed_order = extract(feedback)
-        except Exception as exc:
+        except (OutputParserException, ValidationError) as exc:
             self.log_warning(f"抽取结果未通过结构校验：{exc}")
             return None, [ExtractionProblem(None, self._describe_extraction_error(exc))]
         
@@ -296,8 +364,8 @@ class ParserAgent(BaseAgent):
         for index, item in enumerate(parsed_order.items):
             if not (item.material_name or "").strip():
                 problems.append(ExtractionProblem(index, f"第 {index + 1} 行物料名称缺失"))
-            if not (item.specification or "").strip():
-                problems.append(ExtractionProblem(index, f"第 {index + 1} 行规格型号缺失"))
+            # Null specifications are business uncertainty, not proof of an extraction error.
+            # Matching and risk checks reject them without asking the model to invent a value.
         
         expected_rows = self._count_source_rows(source_text)
         if expected_rows is not None and expected_rows != len(parsed_order.items):
@@ -316,9 +384,7 @@ class ParserAgent(BaseAgent):
                         f"第 {index + 1} 行物料名称「{item.material_name}」无法在原文中定位",
                     ))
         
-        amount_problem = self._check_amount_consistency(parsed_order)
-        if amount_problem is not None:
-            problems.append(amount_problem)
+        # Arithmetic inconsistencies may be present in the source; risk control owns them.
         
         return problems
     
@@ -326,33 +392,29 @@ class ParserAgent(BaseAgent):
     def _count_source_rows(source_text: str) -> Optional[int]:
         if not source_text:
             return None
-        rows = sum(
-            1 for line in source_text.splitlines() if re.match(r"^\s*\d+\s+\S", line)
-        )
-        return rows or None
+        try:
+            document = json.loads(source_text)
+        except (ValueError, TypeError):
+            document = None
+        numbers = []
+        if isinstance(document, dict) and document.get("document_type") == "pdf":
+            for page in document.get("pages", []):
+                for table in page.get("tables", []):
+                    if not table or not table[0] or table[0][0] not in {"序号", "行号"}:
+                        continue
+                    for row in table[1:]:
+                        if not row or not re.fullmatch(r"\d+", str(row[0] or "").strip()):
+                            return None
+                        numbers.append(int(row[0]))
+        else:
+            numbers = [int(match.group(1)) for line in source_text.splitlines()
+                       if (match := re.match(r"^\s*(\d+)\s+\S", line))]
+        # Material grades are not row numbers. Require a complete sequence from 1.
+        return len(numbers) if numbers and numbers == list(range(1, len(numbers) + 1)) else None
     
     @staticmethod
     def _normalize_text(value: str) -> str:
         return re.sub(r"\s+", "", value).lower()
-    
-    def _check_amount_consistency(self, parsed_order: ParsedOrder) -> Optional[ExtractionProblem]:
-        total_amount = parsed_order.total_amount
-        if total_amount is None:
-            return None
-        
-        items = parsed_order.items
-        if any(item.quantity is None or item.unit_price is None for item in items):
-            # 条件不足时不做金额核验；缺失字段由下游风控标记，不按零参与换算
-            return None
-
-        computed = sum(item.quantity * item.unit_price for item in items)
-        tolerance = max(1.0, abs(total_amount) * _AMOUNT_TOLERANCE)
-        if abs(computed - total_amount) > tolerance:
-            return ExtractionProblem(
-                None,
-                f"数量、单价、金额关系不成立：明细合计 {computed:.2f} 与订单总额 {total_amount:.2f} 不一致",
-            )
-        return None
     
     def _flag_unresolved(
         self, parsed_order: ParsedOrder, problems: List[ExtractionProblem]
@@ -362,13 +424,4 @@ class ParserAgent(BaseAgent):
             for problem in problems
         ]
 
-        unresolved_confidence = max(0.0, self.config.risk.confidence_threshold - 0.1)
-        indexes = {problem.item_index for problem in problems}
-        targets = range(len(parsed_order.items)) if None in indexes else indexes
-        
-        for index in targets:
-            if 0 <= index < len(parsed_order.items):
-                parsed_order.items[index].confidence_score = unresolved_confidence
-        
-        parsed_order.parsing_confidence = min(parsed_order.parsing_confidence, unresolved_confidence)
         return parsed_order

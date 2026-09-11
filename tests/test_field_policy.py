@@ -106,7 +106,7 @@ class FieldMissingPolicyTests(unittest.TestCase):
         self.assertIsNone(item.quantity)
         self.assertIsNone(item.unit_price)
 
-    def test_parser_amount_check_skips_incomplete_lines(self):
+    def test_incomplete_lines_are_left_to_business_rules_without_reextraction(self):
         agent = ParserAgent(config=Config())
         order = ParsedOrder(
             items=[OrderItem(material_name="螺丝", specification="M8", quantity=None, unit_price=1.0)],
@@ -114,7 +114,7 @@ class FieldMissingPolicyTests(unittest.TestCase):
             parsing_confidence=0.9,
         )
 
-        self.assertIsNone(agent._check_amount_consistency(order))
+        self.assertEqual(agent._detect_extraction_problems(order, "螺丝 M8 数量待定 单价1"), [])
 
     def test_missing_quantity_is_not_a_parse_failure(self):
         agent = ParserAgent(config=Config())

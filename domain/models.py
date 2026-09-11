@@ -101,6 +101,7 @@ class BusinessAction(str, Enum):
     MANUAL_REVIEW = "manual_review"
 
 class NormalizationChange(BaseModel):
+    item_index: int = Field(description="被归一化的明细行索引，从 0 开始")
     field: str = Field(description="被归一化的字段")
     original_value: str = Field(description="采购方原始书写")
     standard_value: str = Field(description="标准物料库取值")

@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from pathlib import Path
 from typing import Optional, Tuple, List
 
@@ -61,19 +62,32 @@ class DocumentLoader:
         self.logger.info(f"加载PDF文件: {file_path}")
         
         try:
-            doc = fitz.open(file_path)
-            text_parts = []
-            
-            for page_num, page in enumerate(doc):
-                page_text = page.get_text()
-                if page_text.strip():
-                    text_parts.append(page_text)
-            
-            doc.close()
-            full_text = "\n".join(text_parts)
-            
-            self.logger.info(f"PDF加载完成，共 {len(text_parts)} 页")
-            return full_text
+            pages = []
+            with fitz.open(file_path) as doc:
+                for page in doc:
+                    if not page.get_text().strip():
+                        raise ValueError("PDF 包含无可提取文字的页面，请将扫描页作为图片提交")
+                    tables = page.find_tables().tables
+                    bounds = [fitz.Rect(table.bbox) for table in tables]
+                    # Keep each cell intact; exclude its spans from the surrounding text.
+                    lines = []
+                    for block in page.get_text("dict", sort=True)["blocks"]:
+                        for line in block.get("lines", []):
+                            spans = []
+                            for span in line["spans"]:
+                                rect = fitz.Rect(span["bbox"])
+                                center = (rect.tl + rect.br) / 2
+                                if not any(center in bound for bound in bounds):
+                                    spans.append(span["text"])
+                            if spans:
+                                lines.append(" ".join(spans))
+                    pages.append({
+                        "page_number": page.number + 1,
+                        "text": "\n".join(lines),
+                        "tables": [table.extract() for table in tables],
+                    })
+            self.logger.info(f"PDF加载完成，共 {len(pages)} 页")
+            return json.dumps({"document_type": "pdf", "pages": pages}, ensure_ascii=False)
             
         except Exception as e:
             self.logger.error(f"PDF加载失败: {str(e)}")
