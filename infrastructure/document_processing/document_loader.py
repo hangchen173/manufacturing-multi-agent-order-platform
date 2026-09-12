@@ -102,11 +102,17 @@ class DocumentLoader:
         self.logger.info(f"加载Excel文件: {file_path}")
         
         try:
-            df = pd.read_excel(file_path)
-            text = df.to_string(index=False)
-            
-            self.logger.info(f"Excel加载完成，共 {len(df)} 行")
-            return text
+            with pd.ExcelFile(file_path) as workbook:
+                sheet_name = workbook.sheet_names[0]
+                df = pd.read_excel(workbook, sheet_name=sheet_name, header=None,
+                                   dtype=object, keep_default_na=False)
+            # Preserve source cells and leading zeros; do not turn the title into
+            # a header or infer column boundaries from display-alignment spaces.
+            rows = json.loads(df.to_json(orient="values", date_format="iso", force_ascii=False,
+                                        double_precision=15))
+            self.logger.info(f"Excel加载完成，工作表 {sheet_name}，共 {len(rows)} 行")
+            return json.dumps({"document_type": "excel", "sheet_name": sheet_name,
+                               "rows": rows}, ensure_ascii=False)
             
         except Exception as e:
             self.logger.error(f"Excel加载失败: {str(e)}")

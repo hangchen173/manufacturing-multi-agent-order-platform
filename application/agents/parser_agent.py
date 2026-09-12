@@ -3,6 +3,8 @@ from enum import Enum
 import base64
 import hashlib
 import json
+from datetime import date
+from decimal import Decimal, InvalidOperation
 import re
 from pathlib import Path
 from time import perf_counter
@@ -385,7 +387,95 @@ class ParserAgent(BaseAgent):
                     ))
         
         # Arithmetic inconsistencies may be present in the source; risk control owns them.
-        
+        problems.extend(self._detect_excel_cell_problems(parsed_order, source_text))
+        return problems
+
+    @staticmethod
+    def _excel_source_items(document):
+        if not isinstance(document, dict) or document.get("document_type") != "excel":
+            return None
+        headers = {
+            "material_name": {"物料名称", "品名"},
+            "specification": {"规格型号", "规格", "型号"},
+            "quantity": {"数量"}, "unit": {"单位"},
+            "unit_price": {"含税单价", "单价", "单价(元)"},
+            "delivery_date": {"交期", "要求交期", "交货日期"},
+        }
+        columns = None
+        items = []
+        numbers = []
+        common_date = None
+        for source_row, row in enumerate(document.get("rows", []), 1):
+            if not isinstance(row, list):
+                return None
+            if columns is None:
+                labels = [str(cell or "").strip() for cell in row]
+                if labels and labels[0] in headers["delivery_date"] and len(row) > 1:
+                    common_date = row[1]
+                sequence = [i for i, label in enumerate(labels) if label in {"序号", "行号"}]
+                if len(sequence) != 1:
+                    continue
+                columns = {}
+                for field, aliases in headers.items():
+                    matches = [i for i, label in enumerate(labels) if label in aliases]
+                    if len(matches) > 1:
+                        return None
+                    if matches:
+                        columns[field] = matches[0]
+                if not {"material_name", "quantity"}.issubset(columns):
+                    return None
+                sequence_column = sequence[0]
+                continue
+            if not any(cell is not None and cell != "" for cell in row):
+                continue
+            number = row[sequence_column] if sequence_column < len(row) else None
+            try:
+                number = Decimal(str(number))
+            except InvalidOperation:
+                break
+            if not number.is_finite() or number != number.to_integral_value():
+                return None
+            numbers.append(int(number))
+            item = {field: row[index] if index < len(row) else None for field, index in columns.items()}
+            if item.get("delivery_date") in (None, "") and common_date not in (None, ""):
+                item["delivery_date"] = common_date
+            item["source_row"] = source_row
+            items.append(item)
+        return items if numbers and numbers == list(range(1, len(numbers) + 1)) else None
+
+    def _detect_excel_cell_problems(self, parsed_order, source_text):
+        try:
+            source = self._excel_source_items(json.loads(source_text))
+        except (ValueError, TypeError):
+            return []
+        if source is None:
+            return []
+        problems = []
+        for index, (expected, actual) in enumerate(zip(source, parsed_order.items)):
+            for field, value in expected.items():
+                if field == "source_row":
+                    continue
+                predicted = getattr(actual, field)
+                if value in (None, ""):
+                    matches = predicted in (None, "")
+                elif field in {"quantity", "unit_price"}:
+                    try:
+                        source_number = Decimal(str(value).replace(",", ""))
+                    except InvalidOperation:
+                        matches = predicted is None
+                    else:
+                        matches = predicted is not None and source_number == Decimal(str(predicted))
+                elif field == "delivery_date":
+                    try:
+                        matches = date.fromisoformat(str(value).split("T")[0]).isoformat() == predicted
+                    except ValueError:
+                        continue
+                else:
+                    matches = self._normalize_text(str(value)) == self._normalize_text(str(predicted or ""))
+                if not matches:
+                    problems.append(ExtractionProblem(index,
+                        f"第 {index + 1} 项 {field} 与 Excel 第 {expected['source_row']} 行对应列不一致："
+                        f"原单元格为 {value!r}，抽取为 {predicted!r}。请按原列提取，勿将规格尾数当数量；表头统一交期适用于明细。"))
         return problems
     
     @staticmethod
@@ -397,6 +487,9 @@ class ParserAgent(BaseAgent):
         except (ValueError, TypeError):
             document = None
         numbers = []
+        if isinstance(document, dict) and document.get("document_type") == "excel":
+            items = ParserAgent._excel_source_items(document)
+            return len(items) if items is not None else None
         if isinstance(document, dict) and document.get("document_type") == "pdf":
             for page in document.get("pages", []):
                 for table in page.get("tables", []):
