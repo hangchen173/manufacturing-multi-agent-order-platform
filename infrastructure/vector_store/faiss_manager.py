@@ -169,36 +169,3 @@ class FAISSManager:
     
     def get_index_size(self) -> int:
         return self.index.ntotal if self.index else 0
-    
-    def clear_index(self) -> None:
-        self.logger.info("清空索引")
-        self.index = faiss.IndexFlatL2(self.dimension)
-        self.metadata = []
-        self._save_index()
-    
-    def update_document(self, index: int, document: Dict[str, str]) -> bool:
-        if index < 0 or index >= len(self.metadata):
-            self.logger.warning(f"无效的索引: {index}")
-            return False
-        
-        self.metadata[index] = document
-        self._save_index()
-        return True
-    
-    def remove_document(self, index: int) -> bool:
-        if index < 0 or index >= len(self.metadata):
-            self.logger.warning(f"无效的索引: {index}")
-            return False
-        
-        self.metadata.pop(index)
-        
-        texts = [doc.get('text', '') for doc in self.metadata]
-        if texts:
-            embeddings = self.model.encode(texts, convert_to_numpy=True)
-            self.index = faiss.IndexFlatL2(self.dimension)
-            self.index.add(embeddings.astype('float32'))
-        else:
-            self.index = faiss.IndexFlatL2(self.dimension)
-        
-        self._save_index()
-        return True
