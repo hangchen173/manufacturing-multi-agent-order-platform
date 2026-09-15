@@ -1,0 +1,30 @@
+{
+  "document_id": "smoke_11_equivalent_spec",
+  "dataset": "interview_fixed_v1",
+  "split": "smoke",
+  "policy_version": "interview-simulation-v1",
+  "evaluation_as_of": "2026-09-01",
+  "label_basis": "Fixture source fields and catalog identity, with explicitly chosen policy scenario; not system output",
+  "scenario": "equivalent_spec",
+  "order_level": {
+    "order_number": "INT-SMOKE-11",
+    "customer_name": "华明制造",
+    "total_amount": 12.6
+  },
+  "items": [
+    {
+      "material_name_raw": "不锈钢内六角圆柱头螺钉",
+      "specification_raw": "304 M10*16",
+      "quantity": 20,
+      "unit": "个",
+      "unit_price": 0.63,
+      "delivery_date": "2026-09-30",
+      "golden_sku_code": "FST-010",
+      "line_index": 1
+    }
+  ],
+  "business_decision": {
+    "action": "auto_correct",
+    "reason": "equivalent_spec"
+  }
+}

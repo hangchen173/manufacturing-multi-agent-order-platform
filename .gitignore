@@ -45,17 +45,22 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 
 datasets/generated_complex
+datasets/public/
 output/
 .playwright-cli/
-datasets/self_built
-datasets/public/
-# Frozen interview fixtures must travel with their content hashes.
+
+# Frozen regression fixtures must travel with their content hashes. Ignore the
+# contents of self_built and whitelist the fixture directories; ignoring the
+# directory itself would make every negation below ineffective.
+datasets/self_built/*
+!datasets/self_built/interview_v1/
+!datasets/self_built/pdf_regression_v1/
+!datasets/self_built/excel_regression_v1/
 !datasets/self_built/interview_v1/**/orders/*.pdf
 !datasets/self_built/interview_v1/**/orders/*.xlsx
 !datasets/self_built/interview_v1/**/orders/*.png
 !datasets/self_built/pdf_regression_v1/orders/*.pdf
 !datasets/self_built/excel_regression_v1/orders/*.xlsx
-datasets/self_built/*
-!datasets/self_built/excel_regression_v1/
+
 evaluation/results/*
 !evaluation/results/excel_column_fix_20260912/

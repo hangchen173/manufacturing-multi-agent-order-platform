@@ -1,0 +1,30 @@
+{
+  "document_id": "smoke_03_missing_quantity",
+  "dataset": "interview_fixed_v1",
+  "split": "smoke",
+  "policy_version": "interview-simulation-v1",
+  "evaluation_as_of": "2026-09-01",
+  "label_basis": "Fixture source fields and catalog identity, with explicitly chosen policy scenario; not system output",
+  "scenario": "missing_quantity",
+  "order_level": {
+    "order_number": "INT-SMOKE-03",
+    "customer_name": "华明制造",
+    "total_amount": null
+  },
+  "items": [
+    {
+      "material_name_raw": "深沟球轴承",
+      "specification_raw": "6000-2RS",
+      "quantity": null,
+      "unit": "套",
+      "unit_price": 6.8,
+      "delivery_date": "2026-09-30",
+      "golden_sku_code": "BRG-001",
+      "line_index": 1
+    }
+  ],
+  "business_decision": {
+    "action": "manual_review",
+    "reason": "missing_quantity"
+  }
+}
