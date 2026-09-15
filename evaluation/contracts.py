@@ -17,10 +17,15 @@ def normalize_annotation(annotation: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(annotation["order_level"], dict) or not isinstance(annotation["items"], list):
         raise ValueError("order_level must be an object and items must be a list")
 
+    if "confirmation" in annotation:
+        raise ValueError("obsolete annotation field 'confirmation', use business_decision.action")
+
+    # business_decision is optional: public benchmarks such as CORD only ground
+    # truth the extractable fields, so decision metrics are skipped for them.
     decision = annotation.get("business_decision")
-    if not isinstance(decision, dict) or decision.get("action") not in DECISION_ACTIONS:
-        raise ValueError("business_decision.action must be auto_approve, auto_correct, or manual_review")
-    annotation["business_decision"] = decision
+    if decision is not None:
+        if not isinstance(decision, dict) or decision.get("action") not in DECISION_ACTIONS:
+            raise ValueError("business_decision.action must be auto_approve, auto_correct, or manual_review")
     for index, item in enumerate(annotation["items"], start=1):
         if not isinstance(item, dict):
             raise ValueError(f"items[{index - 1}] must be an object")

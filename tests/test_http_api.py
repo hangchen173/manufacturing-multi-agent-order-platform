@@ -3,6 +3,7 @@ import unittest
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from config import Config
 from interfaces.http.flask_app import create_app
@@ -43,6 +44,50 @@ class FakeOrchestrator:
 
 
 class HttpApiTests(unittest.TestCase):
+    def test_sdk_timeout_is_queryable_and_does_not_retry(self):
+        import httpx
+        from openai import OpenAI
+        from application.agents import ParserAgent
+        from application.orchestrators import OrderProcessingOrchestrator
+        from application.services import OrderManager
+        from tests.fakes import InMemoryOrderRepository
+        from tests.test_order_flow import FixedMatcher, FixedRiskControl
+
+        config = Config()
+        config.model.api_key = "test-only"
+        config.data.order_auto_archive_days = 0
+        parser = ParserAgent(config=config)
+        calls = []
+
+        def timeout(request):
+            calls.append(request)
+            raise httpx.ReadTimeout("simulated upstream timeout", request=request)
+
+        with httpx.Client(transport=httpx.MockTransport(timeout)) as transport:
+            parser._get_llm().client = OpenAI(
+                api_key="test-only", http_client=transport, max_retries=0
+            ).chat.completions
+            manager = OrderManager(config=config, repository=InMemoryOrderRepository())
+            orchestrator = OrderProcessingOrchestrator(
+                config=config, order_manager=manager, parser_agent_general=parser,
+                matching_agent=FixedMatcher(), risk_agent=FixedRiskControl(),
+            )
+            app = create_app(config=config, container=SimpleNamespace(
+                orchestrator=orchestrator, readiness=lambda: {"materials": 720}
+            ))
+            client = app.test_client()
+            response = client.post("/api/upload_text", json={"order_text": "1 螺丝 M8 10 个 1元"})
+            self.assertEqual(response.status_code, 400)
+            self.assertFalse(response.json["success"])
+            result = response.json["data"]
+            detail = client.get("/api/orders/" + result["order_id"])
+            self.assertEqual(detail.status_code, 200)
+            self.assertEqual(detail.json["data"]["status"], "failed")
+            self.assertEqual(len(calls), 1)
+            diagnostics = result["diagnostics"]["parser_general"]
+            self.assertEqual(diagnostics["model_calls"][0]["error_type"], "APITimeoutError")
+            self.assertEqual(diagnostics["usage"]["reported_calls"], 0)
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         config = Config()
@@ -50,7 +95,7 @@ class HttpApiTests(unittest.TestCase):
         self.orchestrator = FakeOrchestrator()
         self.app = create_app(
             config=config,
-            container=SimpleNamespace(orchestrator=self.orchestrator),
+            container=SimpleNamespace(orchestrator=self.orchestrator, readiness=lambda: {"materials": 720}),
         )
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
@@ -63,6 +108,14 @@ class HttpApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["status"], "healthy")
+
+    def test_unready_service_is_live_but_rejects_new_processing(self):
+        container = self.app.extensions["container"]
+        with patch.object(container, "readiness", side_effect=RuntimeError("index unavailable")):
+            self.assertEqual(self.client.get("/api/health").status_code, 200)
+            self.assertEqual(self.client.get("/api/ready").status_code, 503)
+            self.assertEqual(self.client.post("/api/upload_text", json={"order_text": "订单"}).status_code, 503)
+        self.assertEqual(self.orchestrator.text_requests, [])
 
     def test_text_upload_delegates_to_orchestrator(self):
         response = self.client.post("/api/upload_text", json={"order_text": "测试订单"})

@@ -38,8 +38,13 @@ class FAISSManager:
     
     def _load_model(self) -> None:
         try:
+            import torch
+
+            # One synchronous worker uses CPU inference; avoid competing OpenMP pools.
+            torch.set_num_threads(1)
+            faiss.omp_set_num_threads(1)
             self.logger.info(f"加载嵌入模型: {self.model_name}")
-            self.model = SentenceTransformer(self.model_name)
+            self.model = SentenceTransformer(self.model_name, device="cpu")
             self.logger.info("嵌入模型加载完成")
         except Exception as e:
             self.logger.error(f"嵌入模型加载失败: {str(e)}")
@@ -60,8 +65,10 @@ class FAISSManager:
         
         if os.path.exists(index_file) and os.path.exists(metadata_file):
             self._load_existing_index(index_file, metadata_file)
-        else:
+        elif not os.path.exists(index_file) and not os.path.exists(metadata_file):
             self._create_new_index()
+        else:
+            raise VectorStoreException("索引文件不完整，请重新初始化索引")
     
     def _load_existing_index(self, index_file: str, metadata_file: str) -> None:
         try:
@@ -74,8 +81,7 @@ class FAISSManager:
             self.logger.info(f"索引加载完成，共 {len(self.metadata)} 条记录")
             
         except Exception as e:
-            self.logger.warning(f"索引加载失败，将创建新索引: {str(e)}")
-            self._create_new_index()
+            raise VectorStoreException(f"索引加载失败: {e}") from e
     
     def _create_new_index(self) -> None:
         self.logger.info("创建新的FAISS索引")
@@ -163,36 +169,3 @@ class FAISSManager:
     
     def get_index_size(self) -> int:
         return self.index.ntotal if self.index else 0
-    
-    def clear_index(self) -> None:
-        self.logger.info("清空索引")
-        self.index = faiss.IndexFlatL2(self.dimension)
-        self.metadata = []
-        self._save_index()
-    
-    def update_document(self, index: int, document: Dict[str, str]) -> bool:
-        if index < 0 or index >= len(self.metadata):
-            self.logger.warning(f"无效的索引: {index}")
-            return False
-        
-        self.metadata[index] = document
-        self._save_index()
-        return True
-    
-    def remove_document(self, index: int) -> bool:
-        if index < 0 or index >= len(self.metadata):
-            self.logger.warning(f"无效的索引: {index}")
-            return False
-        
-        self.metadata.pop(index)
-        
-        texts = [doc.get('text', '') for doc in self.metadata]
-        if texts:
-            embeddings = self.model.encode(texts, convert_to_numpy=True)
-            self.index = faiss.IndexFlatL2(self.dimension)
-            self.index.add(embeddings.astype('float32'))
-        else:
-            self.index = faiss.IndexFlatL2(self.dimension)
-        
-        self._save_index()
-        return True

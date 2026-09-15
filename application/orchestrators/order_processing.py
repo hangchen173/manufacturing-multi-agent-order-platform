@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from application.agents import MatchingAgent, ParserAgent, ParserScenario, RiskControlAgent
@@ -7,7 +7,14 @@ from application.pipeline import AgentPipelineStage
 from application.services import OrderManager
 from config import Config
 from domain.constants import SUPPORTED_IMAGE_EXTENSIONS
-from domain.models import FinalOrderResult, OrderStatus
+from domain.models import (
+    BusinessAction,
+    BusinessDecision,
+    FinalOrderResult,
+    MatchedOrderItem,
+    NormalizationChange,
+    OrderStatus,
+)
 from infrastructure.document_processing import DocumentLoader
 
 class OrderProcessingOrchestrator:
@@ -24,6 +31,7 @@ class OrderProcessingOrchestrator:
         self.config = config or Config()
         self.order_manager = order_manager or OrderManager(config=self.config)
         self.document_loader = document_loader or DocumentLoader()
+        self._last_usage: Dict[str, int] = self._empty_usage()
         
         self.parser_agent_general = parser_agent_general or ParserAgent(
             scenario=ParserScenario.GENERAL_PARSING,
@@ -69,14 +77,25 @@ class OrderProcessingOrchestrator:
             persist_callback=self.order_manager.update_risk_result,
         )
 
+    @staticmethod
+    def _empty_usage() -> Dict[str, int]:
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
     def _build_error_response(self, message: str, order_id: Optional[str] = None) -> Dict[str, Any]:
+        try:
+            order = self.order_manager.get_order(order_id) if order_id else None
+        except Exception:
+            order = None
         return {
             "success": False,
             "order_id": order_id,
             "message": message,
+            "usage": dict(self._last_usage),
+            "diagnostics": order.processing_diagnostics if order else {},
         }
     
     def process_order_from_document(self, file_path: str) -> Dict[str, Any]:
+        self._last_usage = self._empty_usage()
         try:
             file_ext = Path(file_path).suffix.lower()
             
@@ -120,6 +139,7 @@ class OrderProcessingOrchestrator:
         )
     
     def process_order_from_text(self, order_text: str) -> Dict[str, Any]:
+        self._last_usage = self._empty_usage()
         try:
             order_id = self.order_manager.create_order(order_text=order_text)
             return self._process_order_with_parser(
@@ -131,6 +151,21 @@ class OrderProcessingOrchestrator:
             return self._build_error_response(f"订单处理失败: {str(e)}")
     
     def _process_order_with_parser(
+        self, order_id: str, parser_stage: AgentPipelineStage, parser_input: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        try:
+            return self._run_order_pipeline(order_id, parser_stage, parser_input)
+        except Exception as exc:
+            message = f"订单处理失败: {exc}"
+            try:
+                persisted = self.order_manager.set_error(order_id, message)
+            except Exception:
+                persisted = False
+            response = self._build_error_response(message, order_id)
+            response["failure_status_persisted"] = persisted
+            return response
+
+    def _run_order_pipeline(
         self, 
         order_id: str, 
         parser_stage: AgentPipelineStage,
@@ -141,11 +176,17 @@ class OrderProcessingOrchestrator:
             order_id=order_id,
             input_data=parser_input,
         )
+        self._last_usage = dict(parser_result.usage)
         if not parser_result.success:
             return self._build_error_response(parser_result.message, order_id)
 
         parsed_order = parser_result.payload
-        
+
+        if not parsed_order.items:
+            message = "未从订单中解析出任何物料明细，已拒绝处理"
+            self.order_manager.set_error(order_id, message)
+            return self._build_error_response(message, order_id)
+
         return self._process_matching_phase(order_id, parsed_order)
     
     def _process_matching_phase(self, order_id: str, parsed_order: Any) -> Dict[str, Any]:
@@ -184,29 +225,22 @@ class OrderProcessingOrchestrator:
         matched_order: Any, 
         risk_check_result: Any
     ) -> Dict[str, Any]:
-        low_match_score = any(
-            item.match_score < self.config.risk.match_threshold
-            for item in matched_order.items 
-            if hasattr(item, 'match_score')
-        )
-        needs_confirmation = low_match_score or risk_check_result.needs_confirmation
+        if not matched_order.items:
+            message = "订单无有效物料明细，已拒绝处理"
+            self.order_manager.set_error(order_id, message)
+            return self._build_error_response(message, order_id)
+
+        needs_confirmation = risk_check_result.needs_confirmation
+        business_decision = self._decide_business_action(matched_order, needs_confirmation)
         
         final_status = OrderStatus.COMPLETED
+        confirmation_request = None
         if needs_confirmation:
             final_status = OrderStatus.NEEDS_CONFIRMATION
             confirmation_request = self._create_confirmation_request(
                 order_id, 
-                risk_check_result, 
-                matched_order, 
-                low_match_score
+                risk_check_result
             )
-            self.order_manager.add_confirmation_request(order_id, confirmation_request)
-        
-        self.order_manager.update_order_status(
-            order_id,
-            final_status,
-            reason="requires_manual_confirmation" if needs_confirmation else "processing_completed",
-        )
         
         order = self.order_manager.get_order(order_id)
         final_result = FinalOrderResult(
@@ -214,24 +248,102 @@ class OrderProcessingOrchestrator:
             parsed_order=order.parsed_order,
             matched_order=matched_order,
             risk_result=risk_check_result,
+            business_decision=business_decision,
             message="订单处理完成"
         )
-        self.order_manager.update_final_result(order_id, final_result)
+        if not self.order_manager.finalize_order(order_id, final_result, confirmation_request):
+            return self._build_error_response("订单状态已变化，无法保存最终结果", order_id)
         
         return {
             "success": True,
             "order_id": order_id,
             "final_result": final_result,
+            "business_decision": business_decision,
             "needs_confirmation": needs_confirmation,
-            "message": "订单处理完成"
+            "message": "订单处理完成",
+            "usage": dict(self._last_usage),
+            "diagnostics": order.processing_diagnostics,
         }
+    
+    def _decide_business_action(
+        self, matched_order: Any, needs_confirmation: bool
+    ) -> BusinessDecision:
+        if needs_confirmation:
+            return BusinessDecision(
+                action=BusinessAction.MANUAL_REVIEW,
+                reason="风控发现高风险明细项，需人工确认",
+            )
+
+        normalizations: List[NormalizationChange] = []
+        for index, item in enumerate(matched_order.items):
+            normalizations.extend(self._collect_normalizations(item, index))
+
+        if normalizations:
+            fields = sorted({change.field for change in normalizations})
+            return BusinessDecision(
+                action=BusinessAction.AUTO_CORRECT,
+                reason=(
+                    f"{len(normalizations)} 处明细字段按标准物料库完成确定性归一化"
+                    f"（{'、'.join(fields)}），未改变采购意图，未发现风险"
+                ),
+                normalizations=normalizations,
+            )
+
+        return BusinessDecision(
+            action=BusinessAction.AUTO_APPROVE,
+            reason="全部明细与标准物料库一致，未发现风险",
+        )
+
+    _NAME_BASIS = {
+        "catalog_alias_spec_exact": "物料名称命中标准库已登记别名",
+        "catalog_name_spec_exact": "物料名称为标准名的等价书写",
+        "vector_spec_exact": "物料名称与标准库名称兼容且规格一致",
+    }
+
+    def _collect_normalizations(
+        self, item: MatchedOrderItem, item_index: int
+    ) -> List[NormalizationChange]:
+        # 仅在接受标准 SKU 后才做归一化；未接受任何 SKU 时不得改写任何字段
+        if not item.sku_code:
+            return []
+
+        changes: List[NormalizationChange] = []
+
+        # 名称：登记别名或标准名的等价书写，属于不改变采购意图的确定性归一化
+        if self._differs(item.material_name, item.matched_material_name):
+            changes.append(NormalizationChange(
+                item_index=item_index,
+                field="material_name",
+                original_value=item.material_name,
+                standard_value=item.matched_material_name,
+                basis=self._NAME_BASIS.get(
+                    item.match_basis or "", "名称归一化为标准物料名"
+                ),
+            ))
+
+        # 规格：匹配已确认标准规格与原规格为等价书写时才归一化，绝不猜测规格
+        if self._differs(item.specification, item.matched_specification):
+            changes.append(NormalizationChange(
+                item_index=item_index,
+                field="specification",
+                original_value=item.specification,
+                standard_value=item.matched_specification,
+                basis="标准规格与原规格为等价书写",
+            ))
+
+        # 数量、单价、交期不参与自动纠正；单位换算无明确依据一律不自动执行
+        return changes
+
+    @staticmethod
+    def _differs(original: Optional[str], standard: Optional[str]) -> bool:
+        if not original or not standard:
+            return False
+        return original.strip() != standard.strip()
     
     def _create_confirmation_request(
         self, 
         order_id: str, 
-        risk_result: Any, 
-        matched_order: Any = None, 
-        low_match_score: bool = False
+        risk_result: Any
     ) -> Dict[str, Any]:
         issues_summary = [
             {
@@ -244,8 +356,6 @@ class OrderProcessingOrchestrator:
         ]
         
         reasons = []
-        if low_match_score:
-            reasons.append(f"部分物料匹配得分低于 {self.config.risk.match_threshold:.1f}")
         if risk_result.issues:
             reasons.append(f"发现 {len(risk_result.issues)} 个风险问题")
         
@@ -255,7 +365,6 @@ class OrderProcessingOrchestrator:
             "overall_confidence": risk_result.overall_confidence,
             "issues": issues_summary,
             "needs_confirmation_reasons": reasons,
-            "low_match_score": low_match_score,
             "timestamp": datetime.now().isoformat(),
             "required_actions": ["review_issues", "confirm_or_reject"]
         }
@@ -275,33 +384,17 @@ class OrderProcessingOrchestrator:
             }
         
         action = confirmation.get("action")
-        if action == "confirm":
-            self.order_manager.update_order_status(
-                order_id,
-                OrderStatus.COMPLETED,
-                reason="manually_confirmed",
-            )
-            return {
-                "success": True,
-                "order_id": order_id,
-                "message": "订单已确认"
-            }
-        elif action == "reject":
-            self.order_manager.update_order_status(
-                order_id,
-                OrderStatus.FAILED,
-                reason="manually_rejected",
-            )
-            return {
-                "success": True,
-                "order_id": order_id,
-                "message": "订单已拒绝"
-            }
-        else:
+        if action not in {"confirm", "reject"}:
             return {
                 "success": False,
                 "message": "无效的确认操作"
             }
+        if not self.order_manager.review_order(order_id, action, confirmation.get("comment")):
+            return {"success": False, "order_id": order_id, "message": "订单已被处理，请刷新后查看"}
+        return {
+            "success": True, "order_id": order_id,
+            "message": "订单已确认" if action == "confirm" else "订单已拒绝",
+        }
     
     def get_order_status(self, order_id: str) -> Optional[Dict[str, Any]]:
         return self.order_manager.get_order_status(order_id)

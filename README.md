@@ -79,15 +79,3 @@ npm install
 npm run build
 npm test
 ```
-
-## Public repository notes
-
-This public source repository includes the application, agent orchestration, evaluation contracts, tests, and dataset preparation tooling. Large benchmark source files, generated image/annotation assets, vector indexes, uploads, and local environment files are intentionally excluded from version control.
-
-To reproduce the CORD benchmark preparation flow, download the official CORD v2 test Parquet from the dataset publisher, place it under `datasets/public/cord/raw/`, and run:
-
-```bash
-python scripts/prepare_cord.py --limit 100
-```
-
-The generated files remain local by design. See `datasets/README.md` and `evaluation/README.md` for source, licensing, and evaluation conventions.

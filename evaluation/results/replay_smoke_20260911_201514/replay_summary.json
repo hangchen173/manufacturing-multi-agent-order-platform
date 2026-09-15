@@ -1,0 +1,358 @@
+{
+  "total_samples": 5,
+  "success_count": 5,
+  "failure_count": 0,
+  "success_rate": 1.0,
+  "annotated_samples": 5,
+  "needs_confirmation_count": 0,
+  "needs_confirmation_rate": 0.0,
+  "avg_latency_ms": 3002.860916397185,
+  "avg_parsed_items": 25.6,
+  "avg_matched_items": 25.6,
+  "avg_risk_issues": 0.0,
+  "order_level_accuracy": {
+    "order_number": {
+      "matched": 5,
+      "total": 5,
+      "accuracy": 1.0
+    },
+    "customer_name": {
+      "matched": 5,
+      "total": 5,
+      "accuracy": 1.0
+    },
+    "total_amount": {
+      "matched": 5,
+      "total": 5,
+      "accuracy": 1.0
+    }
+  },
+  "item_level_accuracy": {
+    "material_name_raw": {
+      "matched": 128,
+      "total": 128,
+      "accuracy": 1.0
+    },
+    "specification_raw": {
+      "matched": 128,
+      "total": 128,
+      "accuracy": 1.0
+    },
+    "quantity": {
+      "matched": 128,
+      "total": 128,
+      "accuracy": 1.0
+    },
+    "unit": {
+      "matched": 128,
+      "total": 128,
+      "accuracy": 1.0
+    },
+    "unit_price": {
+      "matched": 128,
+      "total": 128,
+      "accuracy": 1.0
+    },
+    "delivery_date": {
+      "matched": 0,
+      "total": 0,
+      "accuracy": 0.0
+    }
+  },
+  "item_count_exact_match": {
+    "matched": 5,
+    "total": 5,
+    "accuracy": 1.0
+  },
+  "sku_top1_accuracy": {
+    "matched": 128,
+    "total": 128,
+    "accuracy": 1.0
+  },
+  "confirmation_accuracy": {
+    "matched": 5,
+    "total": 5,
+    "accuracy": 1.0
+  },
+  "business_decision_accuracy": {
+    "matched": 5,
+    "total": 5,
+    "accuracy": 1.0
+  },
+  "error_auto_release_rate": 0.0,
+  "content_exact_match": {
+    "matched": 5,
+    "total": 5,
+    "accuracy": 1.0
+  },
+  "content_exact_match_success_only": {
+    "matched": 5,
+    "total": 5,
+    "accuracy": 1.0
+  },
+  "auto_handle_coverage": {
+    "matched": 5,
+    "total": 5,
+    "accuracy": 1.0
+  },
+  "manual_review_recall": {
+    "matched": 0,
+    "total": 0,
+    "accuracy": 0.0
+  },
+  "error_auto_release": {
+    "error_count": 0,
+    "decision_total": 5,
+    "error_rate": 0.0
+  },
+  "auto_release_content_error": {
+    "error_count": 0,
+    "auto_release_total": 5,
+    "error_rate": 0.0
+  },
+  "replay": {
+    "source_predictions": "/Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250/predictions.jsonl",
+    "source_run_dir": "/Users/cmh/Documents/AGENT_project/evaluation/results/baseline_generated_complex_test_20260910_234250",
+    "replayed_documents": 5,
+    "failed_documents": 0,
+    "coverage": {
+      "golden_items": 128,
+      "no_golden_items": 0,
+      "correct_match": 128,
+      "wrong_accept": 0,
+      "rejected": 0,
+      "correct_reject": 0,
+      "wrong_accept_no_golden": 0,
+      "accepted_sku_coverage": 1.0,
+      "accepted_sku_precision": 1.0,
+      "sku_accuracy": 1.0
+    },
+    "high_score_wrong_sku": {
+      "threshold": 0.8,
+      "count": 24,
+      "outcomes": {
+        "fixed": 24,
+        "rejected": 0,
+        "still_wrong": 0
+      },
+      "findings": [
+        {
+          "document_id": "mfg_auto_approve_0009",
+          "line_index": 24,
+          "golden_sku": "CBL-043",
+          "old_sku": "CBL-003",
+          "old_score": 0.999,
+          "new_sku": "CBL-043",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0009",
+          "line_index": 26,
+          "golden_sku": "VLV-045",
+          "old_sku": "VLV-050",
+          "old_score": 0.9985,
+          "new_sku": "VLV-045",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0009",
+          "line_index": 28,
+          "golden_sku": "VLV-012",
+          "old_sku": "VLV-017",
+          "old_score": 0.9986,
+          "new_sku": "VLV-012",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0010",
+          "line_index": 6,
+          "golden_sku": "CBL-034",
+          "old_sku": "CBL-014",
+          "old_score": 0.9989,
+          "new_sku": "CBL-034",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0010",
+          "line_index": 7,
+          "golden_sku": "CBL-054",
+          "old_sku": "CBL-014",
+          "old_score": 0.9989,
+          "new_sku": "CBL-054",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0010",
+          "line_index": 11,
+          "golden_sku": "CBL-024",
+          "old_sku": "CBL-004",
+          "old_score": 0.999,
+          "new_sku": "CBL-024",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0010",
+          "line_index": 12,
+          "golden_sku": "SAF-044",
+          "old_sku": "SAF-014",
+          "old_score": 0.9373,
+          "new_sku": "SAF-044",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0010",
+          "line_index": 19,
+          "golden_sku": "SAF-035",
+          "old_sku": "SAF-005",
+          "old_score": 0.9295,
+          "new_sku": "SAF-035",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0010",
+          "line_index": 20,
+          "golden_sku": "CBL-035",
+          "old_sku": "CBL-015",
+          "old_score": 0.9989,
+          "new_sku": "CBL-035",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0019",
+          "line_index": 9,
+          "golden_sku": "VLV-002",
+          "old_sku": "VLV-007",
+          "old_score": 0.9984,
+          "new_sku": "VLV-002",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0019",
+          "line_index": 10,
+          "golden_sku": "CBL-025",
+          "old_sku": "CBL-005",
+          "old_score": 0.999,
+          "new_sku": "CBL-025",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0019",
+          "line_index": 12,
+          "golden_sku": "CBL-036",
+          "old_sku": "CBL-016",
+          "old_score": 0.9988,
+          "new_sku": "CBL-036",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0019",
+          "line_index": 15,
+          "golden_sku": "SAF-032",
+          "old_sku": "SAF-002",
+          "old_score": 0.9112,
+          "new_sku": "SAF-032",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0019",
+          "line_index": 23,
+          "golden_sku": "MET-046",
+          "old_sku": "MET-031",
+          "old_score": 0.9162,
+          "new_sku": "MET-046",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0019",
+          "line_index": 25,
+          "golden_sku": "CBL-027",
+          "old_sku": "CBL-007",
+          "old_score": 0.999,
+          "new_sku": "CBL-027",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 1,
+          "golden_sku": "CBL-047",
+          "old_sku": "CBL-007",
+          "old_score": 0.999,
+          "new_sku": "CBL-047",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 3,
+          "golden_sku": "CBL-039",
+          "old_sku": "CBL-019",
+          "old_score": 0.999,
+          "new_sku": "CBL-039",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 4,
+          "golden_sku": "SAF-031",
+          "old_sku": "SAF-001",
+          "old_score": 0.9086,
+          "new_sku": "SAF-031",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 11,
+          "golden_sku": "MET-011",
+          "old_sku": "MET-016",
+          "old_score": 0.9249,
+          "new_sku": "MET-011",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 15,
+          "golden_sku": "CBL-026",
+          "old_sku": "CBL-006",
+          "old_score": 0.999,
+          "new_sku": "CBL-026",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 20,
+          "golden_sku": "SAF-052",
+          "old_sku": "SAF-022",
+          "old_score": 0.9152,
+          "new_sku": "SAF-052",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0020",
+          "line_index": 21,
+          "golden_sku": "VLV-015",
+          "old_sku": "VLV-020",
+          "old_score": 0.9984,
+          "new_sku": "VLV-015",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0029",
+          "line_index": 1,
+          "golden_sku": "CBL-051",
+          "old_sku": "CBL-011",
+          "old_score": 0.9989,
+          "new_sku": "CBL-051",
+          "outcome": "fixed"
+        },
+        {
+          "document_id": "mfg_auto_approve_0029",
+          "line_index": 3,
+          "golden_sku": "SAF-046",
+          "old_sku": "SAF-016",
+          "old_score": 0.9007,
+          "new_sku": "SAF-046",
+          "outcome": "fixed"
+        }
+      ]
+    }
+  }
+}

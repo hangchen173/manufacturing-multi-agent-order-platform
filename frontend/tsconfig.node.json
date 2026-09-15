@@ -1,4 +1,4 @@
 {
-  "compilerOptions": { "composite": true, "module": "ESNext", "moduleResolution": "Bundler", "allowSyntheticDefaultImports": true, "types": ["node"] },
+  "compilerOptions": { "composite": true, "outDir": "./node_modules/.cache/vite-config", "module": "ESNext", "moduleResolution": "Bundler", "allowSyntheticDefaultImports": true, "types": ["node"] },
   "include": ["vite.config.ts"]
 }

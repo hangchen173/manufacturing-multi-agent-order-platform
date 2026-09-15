@@ -33,6 +33,7 @@ class DatabaseConfig:
 class RiskConfig:
     confidence_threshold: float
     match_threshold: float
+    evaluation_as_of: Optional[str]
 
 class Config:
     def __init__(self):
@@ -60,6 +61,7 @@ class Config:
         self.risk = RiskConfig(
             confidence_threshold=float(self._get_env("RISK_CONFIDENCE_THRESHOLD", default="0.8")),
             match_threshold=float(self._get_env("RISK_MATCH_THRESHOLD", default="0.8")),
+            evaluation_as_of=self._get_env("RISK_EVALUATION_AS_OF"),
         )
     
     @staticmethod

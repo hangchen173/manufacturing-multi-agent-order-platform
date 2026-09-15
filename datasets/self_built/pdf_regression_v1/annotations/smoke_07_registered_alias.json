@@ -1,0 +1,30 @@
+{
+  "document_id": "smoke_07_registered_alias",
+  "dataset": "interview_fixed_v1",
+  "split": "smoke",
+  "policy_version": "interview-simulation-v1",
+  "evaluation_as_of": "2026-09-01",
+  "label_basis": "Fixture source fields and catalog identity, with explicitly chosen policy scenario; not system output",
+  "scenario": "registered_alias",
+  "order_level": {
+    "order_number": "INT-SMOKE-07",
+    "customer_name": "华明制造",
+    "total_amount": 296.0
+  },
+  "items": [
+    {
+      "material_name_raw": "丁腈手套 S码",
+      "specification_raw": "NBR-S-10mil 黑色",
+      "quantity": 20,
+      "unit": "副",
+      "unit_price": 14.8,
+      "delivery_date": "2026-09-30",
+      "golden_sku_code": "SAF-041",
+      "line_index": 1
+    }
+  ],
+  "business_decision": {
+    "action": "auto_correct",
+    "reason": "registered_alias"
+  }
+}

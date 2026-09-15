@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import psycopg
 from psycopg.rows import dict_row
@@ -12,7 +12,19 @@ class OrderRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def save_all(self, snapshots: Dict[str, Dict[str, Any]], archived: bool = False) -> None:
+    def get(self, order_id: str) -> Optional[Dict[str, Any]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def create(self, snapshot: Dict[str, Any]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, snapshot: Dict[str, Any], expected_updated_at: str) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, order_id: str, expected_updated_at: str) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -20,11 +32,7 @@ class OrderRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def archive_orders(
-        self,
-        orders_to_archive: Dict[str, Dict[str, Any]],
-        active_orders: Dict[str, Dict[str, Any]],
-    ) -> None:
+    def archive(self, order_id: str, expected_updated_at: str) -> bool:
         raise NotImplementedError
 
 
@@ -72,39 +80,40 @@ class PostgresOrderRepository(OrderRepository):
             cursor.execute(f"SELECT order_id::text, snapshot FROM {table}")
             return {row["order_id"]: row["snapshot"] for row in cursor.fetchall()}
 
-    def save_all(self, snapshots: Dict[str, Dict[str, Any]], archived: bool = False) -> None:
-        table = self._table(archived)
+    def get(self, order_id: str) -> Optional[Dict[str, Any]]:
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute(f"DELETE FROM {table}")
-            self._upsert_snapshots(cursor, table, snapshots)
+            cursor.execute("SELECT snapshot FROM orders WHERE order_id = %s", (order_id,))
+            row = cursor.fetchone()
+            return row["snapshot"] if row else None
 
-    def _upsert_snapshots(self, cursor, table: str, snapshots: Dict[str, Dict[str, Any]]) -> None:
-        if not snapshots:
-            return
-        rows = [
-            (
-                snapshot["order_id"],
-                snapshot["status"],
-                snapshot["created_at"],
-                snapshot["updated_at"],
-                snapshot.get("document_type"),
-                Jsonb(snapshot),
+    def create(self, snapshot: Dict[str, Any]) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO orders
+                   (order_id, status, created_at, updated_at, document_type, snapshot)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                (snapshot["order_id"], snapshot["status"], snapshot["created_at"],
+                 snapshot["updated_at"], snapshot.get("document_type"), Jsonb(snapshot)),
             )
-            for snapshot in snapshots.values()
-        ]
-        cursor.executemany(
-            f"""
-            INSERT INTO {table} (order_id, status, created_at, updated_at, document_type, snapshot)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (order_id) DO UPDATE SET
-                status = EXCLUDED.status,
-                created_at = EXCLUDED.created_at,
-                updated_at = EXCLUDED.updated_at,
-                document_type = EXCLUDED.document_type,
-                snapshot = EXCLUDED.snapshot
-            """,
-            rows,
-        )
+
+    def update(self, snapshot: Dict[str, Any], expected_updated_at: str) -> bool:
+        # Compare the exact snapshot token to avoid timezone conversion in the CAS check.
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """UPDATE orders SET status = %s, updated_at = %s, snapshot = %s
+                   WHERE order_id = %s AND snapshot->>'updated_at' = %s""",
+                (snapshot["status"], snapshot["updated_at"], Jsonb(snapshot),
+                 snapshot["order_id"], expected_updated_at),
+            )
+            return cursor.rowcount == 1
+
+    def delete(self, order_id: str, expected_updated_at: str) -> bool:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM orders WHERE order_id = %s AND snapshot->>'updated_at' = %s",
+                (order_id, expected_updated_at),
+            )
+            return cursor.rowcount == 1
 
     def load_index(self, archived: bool = False) -> Dict[str, Any]:
         table = self._table(archived)
@@ -124,12 +133,16 @@ class PostgresOrderRepository(OrderRepository):
             "by_document_type": by_document_type,
         }
 
-    def archive_orders(
-        self,
-        orders_to_archive: Dict[str, Dict[str, Any]],
-        active_orders: Dict[str, Dict[str, Any]],
-    ) -> None:
+    def archive(self, order_id: str, expected_updated_at: str) -> bool:
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute(f"DELETE FROM {self._ACTIVE_TABLE}")
-            self._upsert_snapshots(cursor, self._ACTIVE_TABLE, active_orders)
-            self._upsert_snapshots(cursor, self._ARCHIVE_TABLE, orders_to_archive)
+            cursor.execute(
+                """WITH moved AS (
+                     DELETE FROM orders
+                     WHERE order_id = %s AND snapshot->>'updated_at' = %s
+                     RETURNING order_id, status, created_at, updated_at, document_type, snapshot
+                   ) INSERT INTO archived_orders
+                     (order_id, status, created_at, updated_at, document_type, snapshot)
+                     SELECT * FROM moved""",
+                (order_id, expected_updated_at),
+            )
+            return cursor.rowcount == 1

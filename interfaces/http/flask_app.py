@@ -44,6 +44,24 @@ def create_app(
             }
         )
 
+    @app.route("/api/ready", methods=["GET"])
+    def readiness_check():
+        try:
+            detail = container.readiness()
+            return jsonify({"success": True, "status": "ready", "data": detail})
+        except Exception:
+            app.logger.exception("Readiness check failed")
+            return jsonify({"success": False, "status": "not_ready", "message": "业务服务尚未就绪"}), 503
+
+    @app.before_request
+    def check_processing_readiness():
+        if request.path in {"/api/upload", "/api/upload_text"}:
+            try:
+                container.readiness()
+            except Exception:
+                app.logger.exception("Order processing unavailable")
+                return jsonify({"success": False, "message": "业务服务尚未就绪，请稍后重试"}), 503
+
     @app.route("/api/upload", methods=["POST"])
     def upload_order():
         if "file" not in request.files:
@@ -103,7 +121,10 @@ def create_app(
                 }
             ), 400
 
-        result = container.orchestrator.confirm_order(order_id, {"action": action})
+        comment = data.get("comment")
+        if comment is not None and not isinstance(comment, str):
+            return jsonify({"success": False, "message": "comment must be a string"}), 400
+        result = container.orchestrator.confirm_order(order_id, {"action": action, "comment": comment})
         status_code = 200 if result.get("success") else 400
         return jsonify({"success": result.get("success", False), "data": to_jsonable(result)}), status_code
 
@@ -129,4 +150,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=runtime_config.server.port,
         debug=runtime_config.server.debug,
+        threaded=False,
     )

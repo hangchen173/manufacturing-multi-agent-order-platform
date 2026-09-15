@@ -1,0 +1,4380 @@
+{
+  "code_version": "163f9d28a17040af46beffd0fa3e6841912bf484",
+  "source_fingerprint": "1ce4b325f2fc61b0708a1c4d246c58484060c384964ada335c5891dc7cdfdb6e",
+  "scope": "Two original Excel files, real HTTP and PostgreSQL; not an independent benchmark",
+  "records": [
+    {
+      "sample": "mfg_auto_approve_0005",
+      "input_sha256": "3da412a55f045336e1f6b4dc45512cc08782b0ab6d6c520857d065a031fbb97b",
+      "annotation_sha256": "fee1fc48cc5bd2f77af21b7c8d9b27fdc044514900ccab572dfd4794acd3bd8d",
+      "http_status": 200,
+      "response": {
+        "data": {
+          "business_decision": {
+            "action": "auto_approve",
+            "normalizations": [],
+            "reason": "全部明细与标准物料库一致，未发现风险"
+          },
+          "diagnostics": {
+            "matching": {
+              "runner_latency_ms": 4.19,
+              "success": true,
+              "usage": {}
+            },
+            "parser_general": {
+              "model_calls": [
+                {
+                  "call": 1,
+                  "latency_ms": 23853.37,
+                  "total_tokens": 5092,
+                  "usage_reported": true
+                }
+              ],
+              "runner_latency_ms": 24234.86,
+              "self_correction": null,
+              "success": true,
+              "usage": {
+                "attempted_calls": 1,
+                "completion_tokens": 2262,
+                "prompt_tokens": 2830,
+                "reported_calls": 1,
+                "total_tokens": 5092
+              }
+            },
+            "risk_control": {
+              "runner_latency_ms": 3.87,
+              "success": true,
+              "usage": {}
+            }
+          },
+          "final_result": {
+            "business_decision": {
+              "action": "auto_approve",
+              "normalizations": [],
+              "reason": "全部明细与标准物料库一致，未发现风险"
+            },
+            "matched_order": {
+              "customer_name": "客户05号制造有限公司",
+              "items": [
+                {
+                  "candidate_skus": [
+                    "ELC-057"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "交流接触器",
+                  "matched_specification": "CJX2-1810 AC380V 31",
+                  "material_name": "交流接触器",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "ELC-057",
+                  "specification": "CJX2-1810 AC380V 31",
+                  "unit": "个",
+                  "unit_price": 420.4
+                },
+                {
+                  "candidate_skus": [
+                    "PNE-013"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "气缸",
+                  "matched_specification": "SC-32×75",
+                  "material_name": "气缸",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "PNE-013",
+                  "specification": "SC-32×75",
+                  "unit": "个",
+                  "unit_price": 92.2
+                },
+                {
+                  "candidate_skus": [
+                    "TRN-026"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "同步带轮",
+                  "matched_specification": "HTD-5M-36齿-10mm",
+                  "material_name": "同步带轮",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "TRN-026",
+                  "specification": "HTD-5M-36齿-10mm",
+                  "unit": "个",
+                  "unit_price": 51.75
+                },
+                {
+                  "candidate_skus": [
+                    "PKG-045"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "透明缠绕膜",
+                  "matched_specification": "600mm×17μm×500m",
+                  "material_name": "透明缠绕膜",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "PKG-045",
+                  "specification": "600mm×17μm×500m",
+                  "unit": "卷",
+                  "unit_price": 111.0
+                },
+                {
+                  "candidate_skus": [
+                    "CUT-009"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "硬质合金立铣刀",
+                  "matched_specification": "D16×50 4刃",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "CUT-009",
+                  "specification": "D16×50 4刃",
+                  "unit": "支",
+                  "unit_price": 29.44
+                },
+                {
+                  "candidate_skus": [
+                    "MET-010"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "4.0mm×1220×2000",
+                  "material_name": "304不锈钢板",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-010",
+                  "specification": "4.0mm×1220×2000",
+                  "unit": "kg",
+                  "unit_price": 20.88
+                },
+                {
+                  "candidate_skus": [
+                    "CUT-030"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "硬质合金立铣刀",
+                  "matched_specification": "D20×75 4刃",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "CUT-030",
+                  "specification": "D20×75 4刃",
+                  "unit": "支",
+                  "unit_price": 75.22
+                },
+                {
+                  "candidate_skus": [
+                    "MET-027"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "1.5mm×1500×2440",
+                  "material_name": "304不锈钢板",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-027",
+                  "specification": "1.5mm×1500×2440",
+                  "unit": "kg",
+                  "unit_price": 26.32
+                },
+                {
+                  "candidate_skus": [
+                    "BRG-035"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "深沟球轴承",
+                  "matched_specification": "6204-OPEN",
+                  "material_name": "深沟球轴承",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "BRG-035",
+                  "specification": "6204-OPEN",
+                  "unit": "套",
+                  "unit_price": 31.62
+                },
+                {
+                  "candidate_skus": [
+                    "SAF-019"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "丁腈防护手套",
+                  "matched_specification": "NBR-XL-12mil 蓝色",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "SAF-019",
+                  "specification": "NBR-XL-12mil 蓝色",
+                  "unit": "副",
+                  "unit_price": 8.64
+                },
+                {
+                  "candidate_skus": [
+                    "VLV-052"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "不锈钢球阀",
+                  "matched_specification": "Q61F-25P DN20 全通径",
+                  "material_name": "不锈钢球阀",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "VLV-052",
+                  "specification": "Q61F-25P DN20 全通径",
+                  "unit": "个",
+                  "unit_price": 264.75
+                },
+                {
+                  "candidate_skus": [
+                    "SAF-038"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "丁腈防护手套",
+                  "matched_specification": "NBR-L-8mil 黑色",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "SAF-038",
+                  "specification": "NBR-L-8mil 黑色",
+                  "unit": "副",
+                  "unit_price": 13.96
+                },
+                {
+                  "candidate_skus": [
+                    "SNS-039"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "接近传感器",
+                  "matched_specification": "LJ18A3-4-Z/BY",
+                  "material_name": "接近传感器",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "SNS-039",
+                  "specification": "LJ18A3-4-Z/BY",
+                  "unit": "个",
+                  "unit_price": 250.8
+                },
+                {
+                  "candidate_skus": [
+                    "SNS-041"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "接近传感器",
+                  "matched_specification": "LJ6A3-5-Z/BY",
+                  "material_name": "接近传感器",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "SNS-041",
+                  "specification": "LJ6A3-5-Z/BY",
+                  "unit": "个",
+                  "unit_price": 262.0
+                },
+                {
+                  "candidate_skus": [
+                    "BRG-026"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "深沟球轴承",
+                  "matched_specification": "6001-OPEN",
+                  "material_name": "深沟球轴承",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "BRG-026",
+                  "specification": "6001-OPEN",
+                  "unit": "套",
+                  "unit_price": 25.05
+                },
+                {
+                  "candidate_skus": [
+                    "BRG-031"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "深沟球轴承",
+                  "matched_specification": "6200-OPEN",
+                  "material_name": "深沟球轴承",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "BRG-031",
+                  "specification": "6200-OPEN",
+                  "unit": "套",
+                  "unit_price": 28.7
+                },
+                {
+                  "candidate_skus": [
+                    "SAF-027"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "丁腈防护手套",
+                  "matched_specification": "NBR-M-18mil 蓝色",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "SAF-027",
+                  "specification": "NBR-M-18mil 蓝色",
+                  "unit": "副",
+                  "unit_price": 10.88
+                },
+                {
+                  "candidate_skus": [
+                    "CBL-034"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "屏蔽控制电缆",
+                  "matched_specification": "RVVP 3×1.5mm² 柔性屏蔽",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "CBL-034",
+                  "specification": "RVVP 3×1.5mm² 柔性屏蔽",
+                  "unit": "米",
+                  "unit_price": 19.04
+                },
+                {
+                  "candidate_skus": [
+                    "PKG-040"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "透明缠绕膜",
+                  "matched_specification": "600mm×15μm×500m",
+                  "material_name": "透明缠绕膜",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "PKG-040",
+                  "specification": "600mm×15μm×500m",
+                  "unit": "卷",
+                  "unit_price": 103.5
+                },
+                {
+                  "candidate_skus": [
+                    "BRG-050"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "深沟球轴承",
+                  "matched_specification": "6001-C3",
+                  "material_name": "深沟球轴承",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "BRG-050",
+                  "specification": "6001-C3",
+                  "unit": "套",
+                  "unit_price": 42.57
+                },
+                {
+                  "candidate_skus": [
+                    "CBL-003"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "屏蔽控制电缆",
+                  "matched_specification": "RVVP 4×0.5mm² 普通屏蔽",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "CBL-003",
+                  "specification": "RVVP 4×0.5mm² 普通屏蔽",
+                  "unit": "米",
+                  "unit_price": 4.16
+                },
+                {
+                  "candidate_skus": [
+                    "FST-030"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "不锈钢内六角圆柱头螺钉",
+                  "matched_specification": "304 M10×40",
+                  "material_name": "不锈钢内六角圆柱头螺钉",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "FST-030",
+                  "specification": "304 M10×40",
+                  "unit": "个",
+                  "unit_price": 1.63
+                },
+                {
+                  "candidate_skus": [
+                    "PKG-019"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "透明缠绕膜",
+                  "matched_specification": "500mm×20μm×400m",
+                  "material_name": "透明缠绕膜",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "PKG-019",
+                  "specification": "500mm×20μm×400m",
+                  "unit": "卷",
+                  "unit_price": 72.0
+                }
+              ],
+              "order_number": "PO-2026-00005",
+              "parsing_issues": [],
+              "total_amount": 177607.8
+            },
+            "message": "订单处理完成",
+            "parsed_order": {
+              "customer_name": "客户05号制造有限公司",
+              "items": [
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "交流接触器",
+                  "quantity": 20.0,
+                  "specification": "CJX2-1810 AC380V 31",
+                  "unit": "个",
+                  "unit_price": 420.4
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "气缸",
+                  "quantity": 200.0,
+                  "specification": "SC-32×75",
+                  "unit": "个",
+                  "unit_price": 92.2
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "同步带轮",
+                  "quantity": 500.0,
+                  "specification": "HTD-5M-36齿-10mm",
+                  "unit": "个",
+                  "unit_price": 51.75
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "透明缠绕膜",
+                  "quantity": 10.0,
+                  "specification": "600mm×17μm×500m",
+                  "unit": "卷",
+                  "unit_price": 111.0
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 50.0,
+                  "specification": "D16×50 4刃",
+                  "unit": "支",
+                  "unit_price": 29.44
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "304不锈钢板",
+                  "quantity": 200.0,
+                  "specification": "4.0mm×1220×2000",
+                  "unit": "kg",
+                  "unit_price": 20.88
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 200.0,
+                  "specification": "D20×75 4刃",
+                  "unit": "支",
+                  "unit_price": 75.22
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "304不锈钢板",
+                  "quantity": 100.0,
+                  "specification": "1.5mm×1500×2440",
+                  "unit": "kg",
+                  "unit_price": 26.32
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "深沟球轴承",
+                  "quantity": 500.0,
+                  "specification": "6204-OPEN",
+                  "unit": "套",
+                  "unit_price": 31.62
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 200.0,
+                  "specification": "NBR-XL-12mil 蓝色",
+                  "unit": "副",
+                  "unit_price": 8.64
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "不锈钢球阀",
+                  "quantity": 20.0,
+                  "specification": "Q61F-25P DN20 全通径",
+                  "unit": "个",
+                  "unit_price": 264.75
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 500.0,
+                  "specification": "NBR-L-8mil 黑色",
+                  "unit": "副",
+                  "unit_price": 13.96
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "接近传感器",
+                  "quantity": 10.0,
+                  "specification": "LJ18A3-4-Z/BY",
+                  "unit": "个",
+                  "unit_price": 250.8
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "接近传感器",
+                  "quantity": 20.0,
+                  "specification": "LJ6A3-5-Z/BY",
+                  "unit": "个",
+                  "unit_price": 262.0
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "深沟球轴承",
+                  "quantity": 50.0,
+                  "specification": "6001-OPEN",
+                  "unit": "套",
+                  "unit_price": 25.05
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "深沟球轴承",
+                  "quantity": 100.0,
+                  "specification": "6200-OPEN",
+                  "unit": "套",
+                  "unit_price": 28.7
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 100.0,
+                  "specification": "NBR-M-18mil 蓝色",
+                  "unit": "副",
+                  "unit_price": 10.88
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 20.0,
+                  "specification": "RVVP 3×1.5mm² 柔性屏蔽",
+                  "unit": "米",
+                  "unit_price": 19.04
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "透明缠绕膜",
+                  "quantity": 200.0,
+                  "specification": "600mm×15μm×500m",
+                  "unit": "卷",
+                  "unit_price": 103.5
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "深沟球轴承",
+                  "quantity": 500.0,
+                  "specification": "6001-C3",
+                  "unit": "套",
+                  "unit_price": 42.57
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 200.0,
+                  "specification": "RVVP 4×0.5mm² 普通屏蔽",
+                  "unit": "米",
+                  "unit_price": 4.16
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "不锈钢内六角圆柱头螺钉",
+                  "quantity": 50.0,
+                  "specification": "304 M10×40",
+                  "unit": "个",
+                  "unit_price": 1.63
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-09-19",
+                  "material_name": "透明缠绕膜",
+                  "quantity": 200.0,
+                  "specification": "500mm×20μm×400m",
+                  "unit": "卷",
+                  "unit_price": 72.0
+                }
+              ],
+              "order_number": "PO-2026-00005",
+              "parsing_confidence": 1.0,
+              "parsing_issues": [],
+              "total_amount": 177607.8
+            },
+            "risk_result": {
+              "issues": [],
+              "needs_confirmation": false,
+              "overall_confidence": 1.0
+            },
+            "status": "completed"
+          },
+          "message": "订单处理完成",
+          "needs_confirmation": false,
+          "order_id": "b3fac6da-dff8-42c7-b44d-5eeaf4fe1ac9",
+          "success": true,
+          "usage": {
+            "attempted_calls": 1,
+            "completion_tokens": 2262,
+            "prompt_tokens": 2830,
+            "reported_calls": 1,
+            "total_tokens": 5092
+          }
+        },
+        "success": true
+      },
+      "latency_ms": 24632.14912499825,
+      "order": {
+        "confirmation_requests": [],
+        "created_at": "2026-09-12T01:55:29.594887",
+        "document_path": "output/interview_validation/data/uploads/c9a1a195-4e95-41e4-9e5d-41a9b7ff15c1_mfg_auto_approve_0005.xlsx",
+        "document_type": "excel",
+        "error_message": null,
+        "final_result": {
+          "business_decision": {
+            "action": "auto_approve",
+            "normalizations": [],
+            "reason": "全部明细与标准物料库一致，未发现风险"
+          },
+          "matched_order": {
+            "customer_name": "客户05号制造有限公司",
+            "items": [
+              {
+                "candidate_skus": [
+                  "ELC-057"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "交流接触器",
+                "matched_specification": "CJX2-1810 AC380V 31",
+                "material_name": "交流接触器",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "ELC-057",
+                "specification": "CJX2-1810 AC380V 31",
+                "unit": "个",
+                "unit_price": 420.4
+              },
+              {
+                "candidate_skus": [
+                  "PNE-013"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "气缸",
+                "matched_specification": "SC-32×75",
+                "material_name": "气缸",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "PNE-013",
+                "specification": "SC-32×75",
+                "unit": "个",
+                "unit_price": 92.2
+              },
+              {
+                "candidate_skus": [
+                  "TRN-026"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "同步带轮",
+                "matched_specification": "HTD-5M-36齿-10mm",
+                "material_name": "同步带轮",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "TRN-026",
+                "specification": "HTD-5M-36齿-10mm",
+                "unit": "个",
+                "unit_price": 51.75
+              },
+              {
+                "candidate_skus": [
+                  "PKG-045"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "透明缠绕膜",
+                "matched_specification": "600mm×17μm×500m",
+                "material_name": "透明缠绕膜",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "PKG-045",
+                "specification": "600mm×17μm×500m",
+                "unit": "卷",
+                "unit_price": 111.0
+              },
+              {
+                "candidate_skus": [
+                  "CUT-009"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "硬质合金立铣刀",
+                "matched_specification": "D16×50 4刃",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "CUT-009",
+                "specification": "D16×50 4刃",
+                "unit": "支",
+                "unit_price": 29.44
+              },
+              {
+                "candidate_skus": [
+                  "MET-010"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "4.0mm×1220×2000",
+                "material_name": "304不锈钢板",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "MET-010",
+                "specification": "4.0mm×1220×2000",
+                "unit": "kg",
+                "unit_price": 20.88
+              },
+              {
+                "candidate_skus": [
+                  "CUT-030"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "硬质合金立铣刀",
+                "matched_specification": "D20×75 4刃",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "CUT-030",
+                "specification": "D20×75 4刃",
+                "unit": "支",
+                "unit_price": 75.22
+              },
+              {
+                "candidate_skus": [
+                  "MET-027"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "1.5mm×1500×2440",
+                "material_name": "304不锈钢板",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "MET-027",
+                "specification": "1.5mm×1500×2440",
+                "unit": "kg",
+                "unit_price": 26.32
+              },
+              {
+                "candidate_skus": [
+                  "BRG-035"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "深沟球轴承",
+                "matched_specification": "6204-OPEN",
+                "material_name": "深沟球轴承",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "BRG-035",
+                "specification": "6204-OPEN",
+                "unit": "套",
+                "unit_price": 31.62
+              },
+              {
+                "candidate_skus": [
+                  "SAF-019"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "丁腈防护手套",
+                "matched_specification": "NBR-XL-12mil 蓝色",
+                "material_name": "丁腈防护手套",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "SAF-019",
+                "specification": "NBR-XL-12mil 蓝色",
+                "unit": "副",
+                "unit_price": 8.64
+              },
+              {
+                "candidate_skus": [
+                  "VLV-052"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "不锈钢球阀",
+                "matched_specification": "Q61F-25P DN20 全通径",
+                "material_name": "不锈钢球阀",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "VLV-052",
+                "specification": "Q61F-25P DN20 全通径",
+                "unit": "个",
+                "unit_price": 264.75
+              },
+              {
+                "candidate_skus": [
+                  "SAF-038"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "丁腈防护手套",
+                "matched_specification": "NBR-L-8mil 黑色",
+                "material_name": "丁腈防护手套",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "SAF-038",
+                "specification": "NBR-L-8mil 黑色",
+                "unit": "副",
+                "unit_price": 13.96
+              },
+              {
+                "candidate_skus": [
+                  "SNS-039"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "接近传感器",
+                "matched_specification": "LJ18A3-4-Z/BY",
+                "material_name": "接近传感器",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "SNS-039",
+                "specification": "LJ18A3-4-Z/BY",
+                "unit": "个",
+                "unit_price": 250.8
+              },
+              {
+                "candidate_skus": [
+                  "SNS-041"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "接近传感器",
+                "matched_specification": "LJ6A3-5-Z/BY",
+                "material_name": "接近传感器",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "SNS-041",
+                "specification": "LJ6A3-5-Z/BY",
+                "unit": "个",
+                "unit_price": 262.0
+              },
+              {
+                "candidate_skus": [
+                  "BRG-026"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "深沟球轴承",
+                "matched_specification": "6001-OPEN",
+                "material_name": "深沟球轴承",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "BRG-026",
+                "specification": "6001-OPEN",
+                "unit": "套",
+                "unit_price": 25.05
+              },
+              {
+                "candidate_skus": [
+                  "BRG-031"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "深沟球轴承",
+                "matched_specification": "6200-OPEN",
+                "material_name": "深沟球轴承",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "BRG-031",
+                "specification": "6200-OPEN",
+                "unit": "套",
+                "unit_price": 28.7
+              },
+              {
+                "candidate_skus": [
+                  "SAF-027"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "丁腈防护手套",
+                "matched_specification": "NBR-M-18mil 蓝色",
+                "material_name": "丁腈防护手套",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "SAF-027",
+                "specification": "NBR-M-18mil 蓝色",
+                "unit": "副",
+                "unit_price": 10.88
+              },
+              {
+                "candidate_skus": [
+                  "CBL-034"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "屏蔽控制电缆",
+                "matched_specification": "RVVP 3×1.5mm² 柔性屏蔽",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "CBL-034",
+                "specification": "RVVP 3×1.5mm² 柔性屏蔽",
+                "unit": "米",
+                "unit_price": 19.04
+              },
+              {
+                "candidate_skus": [
+                  "PKG-040"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "透明缠绕膜",
+                "matched_specification": "600mm×15μm×500m",
+                "material_name": "透明缠绕膜",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "PKG-040",
+                "specification": "600mm×15μm×500m",
+                "unit": "卷",
+                "unit_price": 103.5
+              },
+              {
+                "candidate_skus": [
+                  "BRG-050"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "深沟球轴承",
+                "matched_specification": "6001-C3",
+                "material_name": "深沟球轴承",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "BRG-050",
+                "specification": "6001-C3",
+                "unit": "套",
+                "unit_price": 42.57
+              },
+              {
+                "candidate_skus": [
+                  "CBL-003"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "屏蔽控制电缆",
+                "matched_specification": "RVVP 4×0.5mm² 普通屏蔽",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "CBL-003",
+                "specification": "RVVP 4×0.5mm² 普通屏蔽",
+                "unit": "米",
+                "unit_price": 4.16
+              },
+              {
+                "candidate_skus": [
+                  "FST-030"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "不锈钢内六角圆柱头螺钉",
+                "matched_specification": "304 M10×40",
+                "material_name": "不锈钢内六角圆柱头螺钉",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "FST-030",
+                "specification": "304 M10×40",
+                "unit": "个",
+                "unit_price": 1.63
+              },
+              {
+                "candidate_skus": [
+                  "PKG-019"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "透明缠绕膜",
+                "matched_specification": "500mm×20μm×400m",
+                "material_name": "透明缠绕膜",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "PKG-019",
+                "specification": "500mm×20μm×400m",
+                "unit": "卷",
+                "unit_price": 72.0
+              }
+            ],
+            "order_number": "PO-2026-00005",
+            "parsing_issues": [],
+            "total_amount": 177607.8
+          },
+          "message": "订单处理完成",
+          "parsed_order": {
+            "customer_name": "客户05号制造有限公司",
+            "items": [
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "交流接触器",
+                "quantity": 20.0,
+                "specification": "CJX2-1810 AC380V 31",
+                "unit": "个",
+                "unit_price": 420.4
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "气缸",
+                "quantity": 200.0,
+                "specification": "SC-32×75",
+                "unit": "个",
+                "unit_price": 92.2
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "同步带轮",
+                "quantity": 500.0,
+                "specification": "HTD-5M-36齿-10mm",
+                "unit": "个",
+                "unit_price": 51.75
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "透明缠绕膜",
+                "quantity": 10.0,
+                "specification": "600mm×17μm×500m",
+                "unit": "卷",
+                "unit_price": 111.0
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 50.0,
+                "specification": "D16×50 4刃",
+                "unit": "支",
+                "unit_price": 29.44
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "304不锈钢板",
+                "quantity": 200.0,
+                "specification": "4.0mm×1220×2000",
+                "unit": "kg",
+                "unit_price": 20.88
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 200.0,
+                "specification": "D20×75 4刃",
+                "unit": "支",
+                "unit_price": 75.22
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "304不锈钢板",
+                "quantity": 100.0,
+                "specification": "1.5mm×1500×2440",
+                "unit": "kg",
+                "unit_price": 26.32
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "深沟球轴承",
+                "quantity": 500.0,
+                "specification": "6204-OPEN",
+                "unit": "套",
+                "unit_price": 31.62
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "丁腈防护手套",
+                "quantity": 200.0,
+                "specification": "NBR-XL-12mil 蓝色",
+                "unit": "副",
+                "unit_price": 8.64
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "不锈钢球阀",
+                "quantity": 20.0,
+                "specification": "Q61F-25P DN20 全通径",
+                "unit": "个",
+                "unit_price": 264.75
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "丁腈防护手套",
+                "quantity": 500.0,
+                "specification": "NBR-L-8mil 黑色",
+                "unit": "副",
+                "unit_price": 13.96
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "接近传感器",
+                "quantity": 10.0,
+                "specification": "LJ18A3-4-Z/BY",
+                "unit": "个",
+                "unit_price": 250.8
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "接近传感器",
+                "quantity": 20.0,
+                "specification": "LJ6A3-5-Z/BY",
+                "unit": "个",
+                "unit_price": 262.0
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "深沟球轴承",
+                "quantity": 50.0,
+                "specification": "6001-OPEN",
+                "unit": "套",
+                "unit_price": 25.05
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "深沟球轴承",
+                "quantity": 100.0,
+                "specification": "6200-OPEN",
+                "unit": "套",
+                "unit_price": 28.7
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "丁腈防护手套",
+                "quantity": 100.0,
+                "specification": "NBR-M-18mil 蓝色",
+                "unit": "副",
+                "unit_price": 10.88
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 20.0,
+                "specification": "RVVP 3×1.5mm² 柔性屏蔽",
+                "unit": "米",
+                "unit_price": 19.04
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "透明缠绕膜",
+                "quantity": 200.0,
+                "specification": "600mm×15μm×500m",
+                "unit": "卷",
+                "unit_price": 103.5
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "深沟球轴承",
+                "quantity": 500.0,
+                "specification": "6001-C3",
+                "unit": "套",
+                "unit_price": 42.57
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 200.0,
+                "specification": "RVVP 4×0.5mm² 普通屏蔽",
+                "unit": "米",
+                "unit_price": 4.16
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "不锈钢内六角圆柱头螺钉",
+                "quantity": 50.0,
+                "specification": "304 M10×40",
+                "unit": "个",
+                "unit_price": 1.63
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-09-19",
+                "material_name": "透明缠绕膜",
+                "quantity": 200.0,
+                "specification": "500mm×20μm×400m",
+                "unit": "卷",
+                "unit_price": 72.0
+              }
+            ],
+            "order_number": "PO-2026-00005",
+            "parsing_confidence": 1.0,
+            "parsing_issues": [],
+            "total_amount": 177607.8
+          },
+          "risk_result": {
+            "issues": [],
+            "needs_confirmation": false,
+            "overall_confidence": 1.0
+          },
+          "status": "completed"
+        },
+        "matched_order": {
+          "customer_name": "客户05号制造有限公司",
+          "items": [
+            {
+              "candidate_skus": [
+                "ELC-057"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "交流接触器",
+              "matched_specification": "CJX2-1810 AC380V 31",
+              "material_name": "交流接触器",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "ELC-057",
+              "specification": "CJX2-1810 AC380V 31",
+              "unit": "个",
+              "unit_price": 420.4
+            },
+            {
+              "candidate_skus": [
+                "PNE-013"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "气缸",
+              "matched_specification": "SC-32×75",
+              "material_name": "气缸",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "PNE-013",
+              "specification": "SC-32×75",
+              "unit": "个",
+              "unit_price": 92.2
+            },
+            {
+              "candidate_skus": [
+                "TRN-026"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "同步带轮",
+              "matched_specification": "HTD-5M-36齿-10mm",
+              "material_name": "同步带轮",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "TRN-026",
+              "specification": "HTD-5M-36齿-10mm",
+              "unit": "个",
+              "unit_price": 51.75
+            },
+            {
+              "candidate_skus": [
+                "PKG-045"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "透明缠绕膜",
+              "matched_specification": "600mm×17μm×500m",
+              "material_name": "透明缠绕膜",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "PKG-045",
+              "specification": "600mm×17μm×500m",
+              "unit": "卷",
+              "unit_price": 111.0
+            },
+            {
+              "candidate_skus": [
+                "CUT-009"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "硬质合金立铣刀",
+              "matched_specification": "D16×50 4刃",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "CUT-009",
+              "specification": "D16×50 4刃",
+              "unit": "支",
+              "unit_price": 29.44
+            },
+            {
+              "candidate_skus": [
+                "MET-010"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "4.0mm×1220×2000",
+              "material_name": "304不锈钢板",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "MET-010",
+              "specification": "4.0mm×1220×2000",
+              "unit": "kg",
+              "unit_price": 20.88
+            },
+            {
+              "candidate_skus": [
+                "CUT-030"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "硬质合金立铣刀",
+              "matched_specification": "D20×75 4刃",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "CUT-030",
+              "specification": "D20×75 4刃",
+              "unit": "支",
+              "unit_price": 75.22
+            },
+            {
+              "candidate_skus": [
+                "MET-027"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "1.5mm×1500×2440",
+              "material_name": "304不锈钢板",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "MET-027",
+              "specification": "1.5mm×1500×2440",
+              "unit": "kg",
+              "unit_price": 26.32
+            },
+            {
+              "candidate_skus": [
+                "BRG-035"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "深沟球轴承",
+              "matched_specification": "6204-OPEN",
+              "material_name": "深沟球轴承",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "BRG-035",
+              "specification": "6204-OPEN",
+              "unit": "套",
+              "unit_price": 31.62
+            },
+            {
+              "candidate_skus": [
+                "SAF-019"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "丁腈防护手套",
+              "matched_specification": "NBR-XL-12mil 蓝色",
+              "material_name": "丁腈防护手套",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "SAF-019",
+              "specification": "NBR-XL-12mil 蓝色",
+              "unit": "副",
+              "unit_price": 8.64
+            },
+            {
+              "candidate_skus": [
+                "VLV-052"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "不锈钢球阀",
+              "matched_specification": "Q61F-25P DN20 全通径",
+              "material_name": "不锈钢球阀",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "VLV-052",
+              "specification": "Q61F-25P DN20 全通径",
+              "unit": "个",
+              "unit_price": 264.75
+            },
+            {
+              "candidate_skus": [
+                "SAF-038"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "丁腈防护手套",
+              "matched_specification": "NBR-L-8mil 黑色",
+              "material_name": "丁腈防护手套",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "SAF-038",
+              "specification": "NBR-L-8mil 黑色",
+              "unit": "副",
+              "unit_price": 13.96
+            },
+            {
+              "candidate_skus": [
+                "SNS-039"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "接近传感器",
+              "matched_specification": "LJ18A3-4-Z/BY",
+              "material_name": "接近传感器",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "SNS-039",
+              "specification": "LJ18A3-4-Z/BY",
+              "unit": "个",
+              "unit_price": 250.8
+            },
+            {
+              "candidate_skus": [
+                "SNS-041"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "接近传感器",
+              "matched_specification": "LJ6A3-5-Z/BY",
+              "material_name": "接近传感器",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "SNS-041",
+              "specification": "LJ6A3-5-Z/BY",
+              "unit": "个",
+              "unit_price": 262.0
+            },
+            {
+              "candidate_skus": [
+                "BRG-026"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "深沟球轴承",
+              "matched_specification": "6001-OPEN",
+              "material_name": "深沟球轴承",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "BRG-026",
+              "specification": "6001-OPEN",
+              "unit": "套",
+              "unit_price": 25.05
+            },
+            {
+              "candidate_skus": [
+                "BRG-031"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "深沟球轴承",
+              "matched_specification": "6200-OPEN",
+              "material_name": "深沟球轴承",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "BRG-031",
+              "specification": "6200-OPEN",
+              "unit": "套",
+              "unit_price": 28.7
+            },
+            {
+              "candidate_skus": [
+                "SAF-027"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "丁腈防护手套",
+              "matched_specification": "NBR-M-18mil 蓝色",
+              "material_name": "丁腈防护手套",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "SAF-027",
+              "specification": "NBR-M-18mil 蓝色",
+              "unit": "副",
+              "unit_price": 10.88
+            },
+            {
+              "candidate_skus": [
+                "CBL-034"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "屏蔽控制电缆",
+              "matched_specification": "RVVP 3×1.5mm² 柔性屏蔽",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "CBL-034",
+              "specification": "RVVP 3×1.5mm² 柔性屏蔽",
+              "unit": "米",
+              "unit_price": 19.04
+            },
+            {
+              "candidate_skus": [
+                "PKG-040"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "透明缠绕膜",
+              "matched_specification": "600mm×15μm×500m",
+              "material_name": "透明缠绕膜",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "PKG-040",
+              "specification": "600mm×15μm×500m",
+              "unit": "卷",
+              "unit_price": 103.5
+            },
+            {
+              "candidate_skus": [
+                "BRG-050"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "深沟球轴承",
+              "matched_specification": "6001-C3",
+              "material_name": "深沟球轴承",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "BRG-050",
+              "specification": "6001-C3",
+              "unit": "套",
+              "unit_price": 42.57
+            },
+            {
+              "candidate_skus": [
+                "CBL-003"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "屏蔽控制电缆",
+              "matched_specification": "RVVP 4×0.5mm² 普通屏蔽",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "CBL-003",
+              "specification": "RVVP 4×0.5mm² 普通屏蔽",
+              "unit": "米",
+              "unit_price": 4.16
+            },
+            {
+              "candidate_skus": [
+                "FST-030"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "不锈钢内六角圆柱头螺钉",
+              "matched_specification": "304 M10×40",
+              "material_name": "不锈钢内六角圆柱头螺钉",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "FST-030",
+              "specification": "304 M10×40",
+              "unit": "个",
+              "unit_price": 1.63
+            },
+            {
+              "candidate_skus": [
+                "PKG-019"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "透明缠绕膜",
+              "matched_specification": "500mm×20μm×400m",
+              "material_name": "透明缠绕膜",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "PKG-019",
+              "specification": "500mm×20μm×400m",
+              "unit": "卷",
+              "unit_price": 72.0
+            }
+          ],
+          "order_number": "PO-2026-00005",
+          "parsing_issues": [],
+          "total_amount": 177607.8
+        },
+        "order_id": "b3fac6da-dff8-42c7-b44d-5eeaf4fe1ac9",
+        "order_text": "{\"document_type\": \"excel\", \"sheet_name\": \"采购订单\", \"rows\": [[\"采购订单 / PURCHASE ORDER\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"订单编号\", \"PO-2026-00005\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"客户名称\", \"客户05号制造有限公司\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"下单日期\", \"2026-08-05\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"要求交期\", \"2026-09-19\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"币种\", \"CNY\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"结算方式\", \"电汇\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"序号\", \"物料名称\", \"规格型号\", \"数量\", \"单位\", \"含税单价\", \"小计\", \"交付备注\"], [1, \"交流接触器\", \"CJX2-1810 AC380V 31\", 20, \"个\", 420.4, 8408, \"按订单交付\"], [2, \"气缸\", \"SC-32×75\", 200, \"个\", 92.2, 18440, \"按订单交付\"], [3, \"同步带轮\", \"HTD-5M-36齿-10mm\", 500, \"个\", 51.75, 25875, \"按订单交付\"], [4, \"透明缠绕膜\", \"600mm×17μm×500m\", 10, \"卷\", 111, 1110, \"按订单交付\"], [5, \"硬质合金立铣刀\", \"D16×50 4刃\", 50, \"支\", 29.44, 1472, \"按订单交付\"], [6, \"304不锈钢板\", \"4.0mm×1220×2000\", 200, \"kg\", 20.88, 4176, \"按订单交付\"], [7, \"硬质合金立铣刀\", \"D20×75 4刃\", 200, \"支\", 75.22, 15044, \"分批交付\"], [8, \"304不锈钢板\", \"1.5mm×1500×2440\", 100, \"kg\", 26.32, 2632, \"按订单交付\"], [9, \"深沟球轴承\", \"6204-OPEN\", 500, \"套\", 31.62, 15810, \"按订单交付\"], [10, \"丁腈防护手套\", \"NBR-XL-12mil 蓝色\", 200, \"副\", 8.64, 1728, \"按订单交付\"], [11, \"不锈钢球阀\", \"Q61F-25P DN20 全通径\", 20, \"个\", 264.75, 5295, \"按订单交付\"], [12, \"丁腈防护手套\", \"NBR-L-8mil 黑色\", 500, \"副\", 13.96, 6980, \"按订单交付\"], [13, \"接近传感器\", \"LJ18A3-4-Z/BY\", 10, \"个\", 250.8, 2508, \"按订单交付\"], [14, \"接近传感器\", \"LJ6A3-5-Z/BY\", 20, \"个\", 262, 5240, \"分批交付\"], [15, \"深沟球轴承\", \"6001-OPEN\", 50, \"套\", 25.05, 1252.5, \"按订单交付\"], [16, \"深沟球轴承\", \"6200-OPEN\", 100, \"套\", 28.7, 2870, \"按订单交付\"], [17, \"丁腈防护手套\", \"NBR-M-18mil 蓝色\", 100, \"副\", 10.88, 1088, \"按订单交付\"], [18, \"屏蔽控制电缆\", \"RVVP 3×1.5mm² 柔性屏蔽\", 20, \"米\", 19.04, 380.8, \"按订单交付\"], [19, \"透明缠绕膜\", \"600mm×15μm×500m\", 200, \"卷\", 103.5, 20700, \"按订单交付\"], [20, \"深沟球轴承\", \"6001-C3\", 500, \"套\", 42.57, 21285, \"按订单交付\"], [21, \"屏蔽控制电缆\", \"RVVP 4×0.5mm² 普通屏蔽\", 200, \"米\", 4.16, 832, \"分批交付\"], [22, \"不锈钢内六角圆柱头螺钉\", \"304 M10×40\", 50, \"个\", 1.63, 81.5, \"按订单交付\"], [23, \"透明缠绕膜\", \"500mm×20μm×400m\", 200, \"卷\", 72, 14400, \"按订单交付\"], [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"\", \"\", \"\", \"\", \"\", \"订单总额\", 177607.8, \"含税，金额以系统复核为准\"]]}",
+        "parsed_order": {
+          "customer_name": "客户05号制造有限公司",
+          "items": [
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "交流接触器",
+              "quantity": 20.0,
+              "specification": "CJX2-1810 AC380V 31",
+              "unit": "个",
+              "unit_price": 420.4
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "气缸",
+              "quantity": 200.0,
+              "specification": "SC-32×75",
+              "unit": "个",
+              "unit_price": 92.2
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "同步带轮",
+              "quantity": 500.0,
+              "specification": "HTD-5M-36齿-10mm",
+              "unit": "个",
+              "unit_price": 51.75
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "透明缠绕膜",
+              "quantity": 10.0,
+              "specification": "600mm×17μm×500m",
+              "unit": "卷",
+              "unit_price": 111.0
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 50.0,
+              "specification": "D16×50 4刃",
+              "unit": "支",
+              "unit_price": 29.44
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "304不锈钢板",
+              "quantity": 200.0,
+              "specification": "4.0mm×1220×2000",
+              "unit": "kg",
+              "unit_price": 20.88
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 200.0,
+              "specification": "D20×75 4刃",
+              "unit": "支",
+              "unit_price": 75.22
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "304不锈钢板",
+              "quantity": 100.0,
+              "specification": "1.5mm×1500×2440",
+              "unit": "kg",
+              "unit_price": 26.32
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "深沟球轴承",
+              "quantity": 500.0,
+              "specification": "6204-OPEN",
+              "unit": "套",
+              "unit_price": 31.62
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "丁腈防护手套",
+              "quantity": 200.0,
+              "specification": "NBR-XL-12mil 蓝色",
+              "unit": "副",
+              "unit_price": 8.64
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "不锈钢球阀",
+              "quantity": 20.0,
+              "specification": "Q61F-25P DN20 全通径",
+              "unit": "个",
+              "unit_price": 264.75
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "丁腈防护手套",
+              "quantity": 500.0,
+              "specification": "NBR-L-8mil 黑色",
+              "unit": "副",
+              "unit_price": 13.96
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "接近传感器",
+              "quantity": 10.0,
+              "specification": "LJ18A3-4-Z/BY",
+              "unit": "个",
+              "unit_price": 250.8
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "接近传感器",
+              "quantity": 20.0,
+              "specification": "LJ6A3-5-Z/BY",
+              "unit": "个",
+              "unit_price": 262.0
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "深沟球轴承",
+              "quantity": 50.0,
+              "specification": "6001-OPEN",
+              "unit": "套",
+              "unit_price": 25.05
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "深沟球轴承",
+              "quantity": 100.0,
+              "specification": "6200-OPEN",
+              "unit": "套",
+              "unit_price": 28.7
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "丁腈防护手套",
+              "quantity": 100.0,
+              "specification": "NBR-M-18mil 蓝色",
+              "unit": "副",
+              "unit_price": 10.88
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 20.0,
+              "specification": "RVVP 3×1.5mm² 柔性屏蔽",
+              "unit": "米",
+              "unit_price": 19.04
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "透明缠绕膜",
+              "quantity": 200.0,
+              "specification": "600mm×15μm×500m",
+              "unit": "卷",
+              "unit_price": 103.5
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "深沟球轴承",
+              "quantity": 500.0,
+              "specification": "6001-C3",
+              "unit": "套",
+              "unit_price": 42.57
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 200.0,
+              "specification": "RVVP 4×0.5mm² 普通屏蔽",
+              "unit": "米",
+              "unit_price": 4.16
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "不锈钢内六角圆柱头螺钉",
+              "quantity": 50.0,
+              "specification": "304 M10×40",
+              "unit": "个",
+              "unit_price": 1.63
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-09-19",
+              "material_name": "透明缠绕膜",
+              "quantity": 200.0,
+              "specification": "500mm×20μm×400m",
+              "unit": "卷",
+              "unit_price": 72.0
+            }
+          ],
+          "order_number": "PO-2026-00005",
+          "parsing_confidence": 1.0,
+          "parsing_issues": [],
+          "total_amount": 177607.8
+        },
+        "processing_diagnostics": {
+          "matching": {
+            "runner_latency_ms": 4.19,
+            "success": true,
+            "usage": {}
+          },
+          "parser_general": {
+            "model_calls": [
+              {
+                "call": 1,
+                "latency_ms": 23853.37,
+                "total_tokens": 5092,
+                "usage_reported": true
+              }
+            ],
+            "runner_latency_ms": 24234.86,
+            "self_correction": null,
+            "success": true,
+            "usage": {
+              "attempted_calls": 1,
+              "completion_tokens": 2262,
+              "prompt_tokens": 2830,
+              "reported_calls": 1,
+              "total_tokens": 5092
+            }
+          },
+          "risk_control": {
+            "runner_latency_ms": 3.87,
+            "success": true,
+            "usage": {}
+          }
+        },
+        "review_actions": [],
+        "risk_result": {
+          "issues": [],
+          "needs_confirmation": false,
+          "overall_confidence": 1.0
+        },
+        "status": "completed",
+        "transition_history": [
+          {
+            "from_status": null,
+            "reason": "order_created",
+            "timestamp": "2026-09-12T01:55:29.594887",
+            "to_status": "pending"
+          },
+          {
+            "from_status": "pending",
+            "reason": "parser_started",
+            "timestamp": "2026-09-12T01:55:29.625505",
+            "to_status": "parsing"
+          },
+          {
+            "from_status": "parsing",
+            "reason": "matching_started",
+            "timestamp": "2026-09-12T01:55:53.941593",
+            "to_status": "matching"
+          },
+          {
+            "from_status": "matching",
+            "reason": "risk_check_started",
+            "timestamp": "2026-09-12T01:55:54.000629",
+            "to_status": "risk_checking"
+          },
+          {
+            "from_status": "risk_checking",
+            "reason": "processing_completed",
+            "timestamp": "2026-09-12T01:55:54.066439",
+            "to_status": "completed"
+          }
+        ],
+        "updated_at": "2026-09-12T01:55:54.066439"
+      },
+      "checks_passed": true
+    },
+    {
+      "sample": "mfg_manual_review_0394",
+      "input_sha256": "4d88037de8c8a35f8cc02aa6f5974f790172bdfedc6110be6355953a520d1284",
+      "annotation_sha256": "f08395f5604a01df3c90effa1957e013c14b0bbbf3759ddcdd4cc3121e932300",
+      "http_status": 200,
+      "response": {
+        "data": {
+          "business_decision": {
+            "action": "manual_review",
+            "normalizations": [],
+            "reason": "风控发现高风险明细项，需人工确认"
+          },
+          "diagnostics": {
+            "matching": {
+              "runner_latency_ms": 1.03,
+              "success": true,
+              "usage": {}
+            },
+            "parser_general": {
+              "model_calls": [
+                {
+                  "call": 1,
+                  "latency_ms": 26022.05,
+                  "total_tokens": 5420,
+                  "usage_reported": true
+                }
+              ],
+              "runner_latency_ms": 26024.62,
+              "self_correction": null,
+              "success": true,
+              "usage": {
+                "attempted_calls": 1,
+                "completion_tokens": 2472,
+                "prompt_tokens": 2948,
+                "reported_calls": 1,
+                "total_tokens": 5420
+              }
+            },
+            "risk_control": {
+              "runner_latency_ms": 5.17,
+              "success": true,
+              "usage": {}
+            }
+          },
+          "final_result": {
+            "business_decision": {
+              "action": "manual_review",
+              "normalizations": [],
+              "reason": "风控发现高风险明细项，需人工确认"
+            },
+            "matched_order": {
+              "customer_name": "客户42号制造有限公司",
+              "items": [
+                {
+                  "candidate_skus": [
+                    "SAF-054"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "丁腈防护手套",
+                  "matched_specification": "NBR-XL-15mil 黑色",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "SAF-054",
+                  "specification": "NBR-XL-15mil 黑色",
+                  "unit": "副",
+                  "unit_price": 18.44
+                },
+                {
+                  "candidate_skus": [
+                    "SNS-031"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "接近传感器",
+                  "matched_specification": "LJ6A3-2-Z/BY",
+                  "material_name": "接近传感器",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "SNS-031",
+                  "specification": "LJ6A3-2-Z/BY",
+                  "unit": "个",
+                  "unit_price": 206.0
+                },
+                {
+                  "candidate_skus": [
+                    "SNS-020"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "接近传感器",
+                  "matched_specification": "LJ30A3-5-Z/BX",
+                  "material_name": "接近传感器",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "SNS-020",
+                  "specification": "LJ30A3-5-Z/BX",
+                  "unit": "个",
+                  "unit_price": 144.4
+                },
+                {
+                  "candidate_skus": [
+                    "VLV-003"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "不锈钢球阀",
+                  "matched_specification": "Q11F-16P DN25 全通径",
+                  "material_name": "不锈钢球阀",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "VLV-003",
+                  "specification": "Q11F-16P DN25 全通径",
+                  "unit": "个",
+                  "unit_price": 56.5
+                },
+                {
+                  "candidate_skus": [
+                    "CBL-059"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "屏蔽控制电缆",
+                  "matched_specification": "RVVP 4×2.5mm² 耐油屏蔽",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "CBL-059",
+                  "specification": "RVVP 4×2.5mm² 耐油屏蔽",
+                  "unit": "米",
+                  "unit_price": 31.04
+                },
+                {
+                  "candidate_skus": [
+                    "MET-047"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "1.5mm×1000×6000",
+                  "material_name": "304不锈钢板",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-047",
+                  "specification": "1.5mm×1000×6000",
+                  "unit": "kg",
+                  "unit_price": 32.72
+                },
+                {
+                  "candidate_skus": [
+                    "CUT-039"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "硬质合金立铣刀",
+                  "matched_specification": "D16×100 4刃",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "CUT-039",
+                  "specification": "D16×100 4刃",
+                  "unit": "支",
+                  "unit_price": 94.84
+                },
+                {
+                  "candidate_skus": [
+                    "CBL-046"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "屏蔽控制电缆",
+                  "matched_specification": "RVVP 3×0.75mm² 耐油屏蔽",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "CBL-046",
+                  "specification": "RVVP 3×0.75mm² 耐油屏蔽",
+                  "unit": "米",
+                  "unit_price": 24.8
+                },
+                {
+                  "candidate_skus": [
+                    "MET-058"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "2.0mm×1500×6000",
+                  "material_name": "304不锈钢板",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-058",
+                  "specification": "2.0mm×1500×6000",
+                  "unit": "kg",
+                  "unit_price": 36.24
+                },
+                {
+                  "candidate_skus": [
+                    "PNE-012"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "气缸",
+                  "matched_specification": "SC-25×75",
+                  "material_name": "气缸",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "PNE-012",
+                  "specification": "SC-25×75",
+                  "unit": "个",
+                  "unit_price": 89.1
+                },
+                {
+                  "candidate_skus": [
+                    "TRN-003"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "同步带轮",
+                  "matched_specification": "HTD-8M-20齿-8mm",
+                  "material_name": "同步带轮",
+                  "quantity": 20.0,
+                  "rejection_reason": null,
+                  "sku_code": "TRN-003",
+                  "specification": "HTD-8M-20齿-8mm",
+                  "unit": "个",
+                  "unit_price": 20.7
+                },
+                {
+                  "candidate_skus": [
+                    "MET-031"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "1.0mm×1000×3000",
+                  "material_name": "304不锈钢板",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-031",
+                  "specification": "1.0mm×1000×3000",
+                  "unit": "kg",
+                  "unit_price": 27.6
+                },
+                {
+                  "candidate_skus": [
+                    "CUT-015"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "硬质合金立铣刀",
+                  "matched_specification": "D6×60 4刃",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "CUT-015",
+                  "specification": "D6×60 4刃",
+                  "unit": "支",
+                  "unit_price": 42.52
+                },
+                {
+                  "candidate_skus": [
+                    "VLV-007"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "不锈钢球阀",
+                  "matched_specification": "Q11F-16P DN20 缩径",
+                  "material_name": "不锈钢球阀",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "VLV-007",
+                  "specification": "Q11F-16P DN20 缩径",
+                  "unit": "个",
+                  "unit_price": 73.5
+                },
+                {
+                  "candidate_skus": [
+                    "MET-014"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "3.0mm×1500×2000",
+                  "material_name": "304不锈钢板",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-014",
+                  "specification": "3.0mm×1500×2000",
+                  "unit": "kg",
+                  "unit_price": 22.16
+                },
+                {
+                  "candidate_skus": [
+                    "MET-052"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "304不锈钢板",
+                  "matched_specification": "1.5mm×1220×6000",
+                  "material_name": "304不锈钢板",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "MET-052",
+                  "specification": "1.5mm×1220×6000",
+                  "unit": "kg",
+                  "unit_price": 34.32
+                },
+                {
+                  "candidate_skus": [
+                    "CBL-026"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "屏蔽控制电缆",
+                  "matched_specification": "RVVP 3×0.75mm² 柔性屏蔽",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "CBL-026",
+                  "specification": "RVVP 3×0.75mm² 柔性屏蔽",
+                  "unit": "米",
+                  "unit_price": 15.2
+                },
+                {
+                  "candidate_skus": [
+                    "SAF-009"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "丁腈防护手套",
+                  "matched_specification": "NBR-XL-8mil 蓝色",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "SAF-009",
+                  "specification": "NBR-XL-8mil 蓝色",
+                  "unit": "副",
+                  "unit_price": 5.84
+                },
+                {
+                  "candidate_skus": [
+                    "CBL-019"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "屏蔽控制电缆",
+                  "matched_specification": "RVVP 4×2.5mm² 普通屏蔽",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "CBL-019",
+                  "specification": "RVVP 4×2.5mm² 普通屏蔽",
+                  "unit": "米",
+                  "unit_price": 11.84
+                },
+                {
+                  "candidate_skus": [
+                    "SNS-017"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "接近传感器",
+                  "matched_specification": "LJ8A3-5-Z/BX",
+                  "material_name": "接近传感器",
+                  "quantity": 200.0,
+                  "rejection_reason": null,
+                  "sku_code": "SNS-017",
+                  "specification": "LJ8A3-5-Z/BX",
+                  "unit": "个",
+                  "unit_price": 127.6
+                },
+                {
+                  "candidate_skus": [
+                    "SAF-060"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "丁腈防护手套",
+                  "matched_specification": "NBR-XXL-18mil 黑色",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 500.0,
+                  "rejection_reason": null,
+                  "sku_code": "SAF-060",
+                  "specification": "NBR-XXL-18mil 黑色",
+                  "unit": "副",
+                  "unit_price": 20.12
+                },
+                {
+                  "candidate_skus": [
+                    "TRN-004"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "同步带轮",
+                  "matched_specification": "HTD-3M-24齿-8mm",
+                  "material_name": "同步带轮",
+                  "quantity": 50.0,
+                  "rejection_reason": null,
+                  "sku_code": "TRN-004",
+                  "specification": "HTD-3M-24齿-8mm",
+                  "unit": "个",
+                  "unit_price": 22.05
+                },
+                {
+                  "candidate_skus": [
+                    "BRG-041"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "深沟球轴承",
+                  "matched_specification": "6004-2RZ",
+                  "material_name": "深沟球轴承",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "BRG-041",
+                  "specification": "6004-2RZ",
+                  "unit": "套",
+                  "unit_price": 36.0
+                },
+                {
+                  "candidate_skus": [
+                    "FST-003"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "不锈钢内六角圆柱头螺钉",
+                  "matched_specification": "304 M6×12",
+                  "material_name": "不锈钢内六角圆柱头螺钉",
+                  "quantity": 10.0,
+                  "rejection_reason": null,
+                  "sku_code": "FST-003",
+                  "specification": "304 M6×12",
+                  "unit": "个",
+                  "unit_price": 0.28
+                },
+                {
+                  "candidate_skus": [
+                    "TRN-048"
+                  ],
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "match_basis": "catalog_name_spec_exact",
+                  "match_score": 1.0,
+                  "matched_material_name": "同步带轮",
+                  "matched_specification": "HTD-8M-20齿-15mm",
+                  "material_name": "同步带轮",
+                  "quantity": 100.0,
+                  "rejection_reason": null,
+                  "sku_code": "TRN-048",
+                  "specification": "HTD-8M-20齿-15mm",
+                  "unit": "个",
+                  "unit_price": 81.45
+                }
+              ],
+              "order_number": "PO-2026-01194",
+              "parsing_issues": [],
+              "total_amount": 208677.9
+            },
+            "message": "订单处理完成",
+            "parsed_order": {
+              "customer_name": "客户42号制造有限公司",
+              "items": [
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 500.0,
+                  "specification": "NBR-XL-15mil 黑色",
+                  "unit": "副",
+                  "unit_price": 18.44
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "接近传感器",
+                  "quantity": 100.0,
+                  "specification": "LJ6A3-2-Z/BY",
+                  "unit": "个",
+                  "unit_price": 206.0
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "接近传感器",
+                  "quantity": 10.0,
+                  "specification": "LJ30A3-5-Z/BX",
+                  "unit": "个",
+                  "unit_price": 144.4
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "不锈钢球阀",
+                  "quantity": 20.0,
+                  "specification": "Q11F-16P DN25 全通径",
+                  "unit": "个",
+                  "unit_price": 56.5
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 20.0,
+                  "specification": "RVVP 4×2.5mm² 耐油屏蔽",
+                  "unit": "米",
+                  "unit_price": 31.04
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "304不锈钢板",
+                  "quantity": 500.0,
+                  "specification": "1.5mm×1000×6000",
+                  "unit": "kg",
+                  "unit_price": 32.72
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 100.0,
+                  "specification": "D16×100 4刃",
+                  "unit": "支",
+                  "unit_price": 94.84
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 100.0,
+                  "specification": "RVVP 3×0.75mm² 耐油屏蔽",
+                  "unit": "米",
+                  "unit_price": 24.8
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "304不锈钢板",
+                  "quantity": 500.0,
+                  "specification": "2.0mm×1500×6000",
+                  "unit": "kg",
+                  "unit_price": 36.24
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "气缸",
+                  "quantity": 200.0,
+                  "specification": "SC-25×75",
+                  "unit": "个",
+                  "unit_price": 89.1
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "同步带轮",
+                  "quantity": 20.0,
+                  "specification": "HTD-8M-20齿-8mm",
+                  "unit": "个",
+                  "unit_price": 20.7
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "304不锈钢板",
+                  "quantity": 50.0,
+                  "specification": "1.0mm×1000×3000",
+                  "unit": "kg",
+                  "unit_price": 27.6
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "硬质合金立铣刀",
+                  "quantity": 500.0,
+                  "specification": "D6×60 4刃",
+                  "unit": "支",
+                  "unit_price": 42.52
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "不锈钢球阀",
+                  "quantity": 500.0,
+                  "specification": "Q11F-16P DN20 缩径",
+                  "unit": "个",
+                  "unit_price": 73.5
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "304不锈钢板",
+                  "quantity": 50.0,
+                  "specification": "3.0mm×1500×2000",
+                  "unit": "kg",
+                  "unit_price": 22.16
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "304不锈钢板",
+                  "quantity": 50.0,
+                  "specification": "1.5mm×1220×6000",
+                  "unit": "kg",
+                  "unit_price": 34.32
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 10.0,
+                  "specification": "RVVP 3×0.75mm² 柔性屏蔽",
+                  "unit": "米",
+                  "unit_price": 15.2
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 10.0,
+                  "specification": "NBR-XL-8mil 蓝色",
+                  "unit": "副",
+                  "unit_price": 5.84
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "屏蔽控制电缆",
+                  "quantity": 10.0,
+                  "specification": "RVVP 4×2.5mm² 普通屏蔽",
+                  "unit": "米",
+                  "unit_price": 11.84
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "接近传感器",
+                  "quantity": 200.0,
+                  "specification": "LJ8A3-5-Z/BX",
+                  "unit": "个",
+                  "unit_price": 127.6
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "丁腈防护手套",
+                  "quantity": 500.0,
+                  "specification": "NBR-XXL-18mil 黑色",
+                  "unit": "副",
+                  "unit_price": 20.12
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "同步带轮",
+                  "quantity": 50.0,
+                  "specification": "HTD-3M-24齿-8mm",
+                  "unit": "个",
+                  "unit_price": 22.05
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "深沟球轴承",
+                  "quantity": 100.0,
+                  "specification": "6004-2RZ",
+                  "unit": "套",
+                  "unit_price": 36.0
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "不锈钢内六角圆柱头螺钉",
+                  "quantity": 10.0,
+                  "specification": "304 M6×12",
+                  "unit": "个",
+                  "unit_price": 0.28
+                },
+                {
+                  "confidence_score": 1.0,
+                  "delivery_date": "2026-10-08",
+                  "material_name": "同步带轮",
+                  "quantity": 100.0,
+                  "specification": "HTD-8M-20齿-15mm",
+                  "unit": "个",
+                  "unit_price": 81.45
+                }
+              ],
+              "order_number": "PO-2026-01194",
+              "parsing_confidence": 1.0,
+              "parsing_issues": [],
+              "total_amount": 208677.9
+            },
+            "risk_result": {
+              "issues": [
+                {
+                  "description": "明细金额合计 208665.90 与订单总额 208677.90 不一致",
+                  "issue_type": "line_total_mismatch",
+                  "item_index": -1,
+                  "severity": "high"
+                }
+              ],
+              "needs_confirmation": true,
+              "overall_confidence": 0.8
+            },
+            "status": "needs_confirmation"
+          },
+          "message": "订单处理完成",
+          "needs_confirmation": true,
+          "order_id": "c1a66f99-ba25-4657-a9c0-c13dfa7b2db1",
+          "success": true,
+          "usage": {
+            "attempted_calls": 1,
+            "completion_tokens": 2472,
+            "prompt_tokens": 2948,
+            "reported_calls": 1,
+            "total_tokens": 5420
+          }
+        },
+        "success": true
+      },
+      "latency_ms": 26338.433874989278,
+      "order": {
+        "confirmation_requests": [
+          {
+            "issues": [
+              {
+                "description": "明细金额合计 208665.90 与订单总额 208677.90 不一致",
+                "issue_type": "line_total_mismatch",
+                "item_index": -1,
+                "severity": "high"
+              }
+            ],
+            "needs_confirmation_reasons": [
+              "发现 1 个风险问题"
+            ],
+            "order_id": "c1a66f99-ba25-4657-a9c0-c13dfa7b2db1",
+            "overall_confidence": 0.8,
+            "required_actions": [
+              "review_issues",
+              "confirm_or_reject"
+            ],
+            "timestamp": "2026-09-12T01:56:20.403885",
+            "type": "risk_confirmation"
+          }
+        ],
+        "created_at": "2026-09-12T01:55:54.134638",
+        "document_path": "output/interview_validation/data/uploads/7cad830c-ddc1-4519-b404-4f7affb042e7_mfg_manual_review_0394.xlsx",
+        "document_type": "excel",
+        "error_message": null,
+        "final_result": {
+          "business_decision": {
+            "action": "manual_review",
+            "normalizations": [],
+            "reason": "风控发现高风险明细项，需人工确认"
+          },
+          "matched_order": {
+            "customer_name": "客户42号制造有限公司",
+            "items": [
+              {
+                "candidate_skus": [
+                  "SAF-054"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "丁腈防护手套",
+                "matched_specification": "NBR-XL-15mil 黑色",
+                "material_name": "丁腈防护手套",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "SAF-054",
+                "specification": "NBR-XL-15mil 黑色",
+                "unit": "副",
+                "unit_price": 18.44
+              },
+              {
+                "candidate_skus": [
+                  "SNS-031"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "接近传感器",
+                "matched_specification": "LJ6A3-2-Z/BY",
+                "material_name": "接近传感器",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "SNS-031",
+                "specification": "LJ6A3-2-Z/BY",
+                "unit": "个",
+                "unit_price": 206.0
+              },
+              {
+                "candidate_skus": [
+                  "SNS-020"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "接近传感器",
+                "matched_specification": "LJ30A3-5-Z/BX",
+                "material_name": "接近传感器",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "SNS-020",
+                "specification": "LJ30A3-5-Z/BX",
+                "unit": "个",
+                "unit_price": 144.4
+              },
+              {
+                "candidate_skus": [
+                  "VLV-003"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "不锈钢球阀",
+                "matched_specification": "Q11F-16P DN25 全通径",
+                "material_name": "不锈钢球阀",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "VLV-003",
+                "specification": "Q11F-16P DN25 全通径",
+                "unit": "个",
+                "unit_price": 56.5
+              },
+              {
+                "candidate_skus": [
+                  "CBL-059"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "屏蔽控制电缆",
+                "matched_specification": "RVVP 4×2.5mm² 耐油屏蔽",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "CBL-059",
+                "specification": "RVVP 4×2.5mm² 耐油屏蔽",
+                "unit": "米",
+                "unit_price": 31.04
+              },
+              {
+                "candidate_skus": [
+                  "MET-047"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "1.5mm×1000×6000",
+                "material_name": "304不锈钢板",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "MET-047",
+                "specification": "1.5mm×1000×6000",
+                "unit": "kg",
+                "unit_price": 32.72
+              },
+              {
+                "candidate_skus": [
+                  "CUT-039"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "硬质合金立铣刀",
+                "matched_specification": "D16×100 4刃",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "CUT-039",
+                "specification": "D16×100 4刃",
+                "unit": "支",
+                "unit_price": 94.84
+              },
+              {
+                "candidate_skus": [
+                  "CBL-046"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "屏蔽控制电缆",
+                "matched_specification": "RVVP 3×0.75mm² 耐油屏蔽",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "CBL-046",
+                "specification": "RVVP 3×0.75mm² 耐油屏蔽",
+                "unit": "米",
+                "unit_price": 24.8
+              },
+              {
+                "candidate_skus": [
+                  "MET-058"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "2.0mm×1500×6000",
+                "material_name": "304不锈钢板",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "MET-058",
+                "specification": "2.0mm×1500×6000",
+                "unit": "kg",
+                "unit_price": 36.24
+              },
+              {
+                "candidate_skus": [
+                  "PNE-012"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "气缸",
+                "matched_specification": "SC-25×75",
+                "material_name": "气缸",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "PNE-012",
+                "specification": "SC-25×75",
+                "unit": "个",
+                "unit_price": 89.1
+              },
+              {
+                "candidate_skus": [
+                  "TRN-003"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "同步带轮",
+                "matched_specification": "HTD-8M-20齿-8mm",
+                "material_name": "同步带轮",
+                "quantity": 20.0,
+                "rejection_reason": null,
+                "sku_code": "TRN-003",
+                "specification": "HTD-8M-20齿-8mm",
+                "unit": "个",
+                "unit_price": 20.7
+              },
+              {
+                "candidate_skus": [
+                  "MET-031"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "1.0mm×1000×3000",
+                "material_name": "304不锈钢板",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "MET-031",
+                "specification": "1.0mm×1000×3000",
+                "unit": "kg",
+                "unit_price": 27.6
+              },
+              {
+                "candidate_skus": [
+                  "CUT-015"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "硬质合金立铣刀",
+                "matched_specification": "D6×60 4刃",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "CUT-015",
+                "specification": "D6×60 4刃",
+                "unit": "支",
+                "unit_price": 42.52
+              },
+              {
+                "candidate_skus": [
+                  "VLV-007"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "不锈钢球阀",
+                "matched_specification": "Q11F-16P DN20 缩径",
+                "material_name": "不锈钢球阀",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "VLV-007",
+                "specification": "Q11F-16P DN20 缩径",
+                "unit": "个",
+                "unit_price": 73.5
+              },
+              {
+                "candidate_skus": [
+                  "MET-014"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "3.0mm×1500×2000",
+                "material_name": "304不锈钢板",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "MET-014",
+                "specification": "3.0mm×1500×2000",
+                "unit": "kg",
+                "unit_price": 22.16
+              },
+              {
+                "candidate_skus": [
+                  "MET-052"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "304不锈钢板",
+                "matched_specification": "1.5mm×1220×6000",
+                "material_name": "304不锈钢板",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "MET-052",
+                "specification": "1.5mm×1220×6000",
+                "unit": "kg",
+                "unit_price": 34.32
+              },
+              {
+                "candidate_skus": [
+                  "CBL-026"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "屏蔽控制电缆",
+                "matched_specification": "RVVP 3×0.75mm² 柔性屏蔽",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "CBL-026",
+                "specification": "RVVP 3×0.75mm² 柔性屏蔽",
+                "unit": "米",
+                "unit_price": 15.2
+              },
+              {
+                "candidate_skus": [
+                  "SAF-009"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "丁腈防护手套",
+                "matched_specification": "NBR-XL-8mil 蓝色",
+                "material_name": "丁腈防护手套",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "SAF-009",
+                "specification": "NBR-XL-8mil 蓝色",
+                "unit": "副",
+                "unit_price": 5.84
+              },
+              {
+                "candidate_skus": [
+                  "CBL-019"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "屏蔽控制电缆",
+                "matched_specification": "RVVP 4×2.5mm² 普通屏蔽",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "CBL-019",
+                "specification": "RVVP 4×2.5mm² 普通屏蔽",
+                "unit": "米",
+                "unit_price": 11.84
+              },
+              {
+                "candidate_skus": [
+                  "SNS-017"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "接近传感器",
+                "matched_specification": "LJ8A3-5-Z/BX",
+                "material_name": "接近传感器",
+                "quantity": 200.0,
+                "rejection_reason": null,
+                "sku_code": "SNS-017",
+                "specification": "LJ8A3-5-Z/BX",
+                "unit": "个",
+                "unit_price": 127.6
+              },
+              {
+                "candidate_skus": [
+                  "SAF-060"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "丁腈防护手套",
+                "matched_specification": "NBR-XXL-18mil 黑色",
+                "material_name": "丁腈防护手套",
+                "quantity": 500.0,
+                "rejection_reason": null,
+                "sku_code": "SAF-060",
+                "specification": "NBR-XXL-18mil 黑色",
+                "unit": "副",
+                "unit_price": 20.12
+              },
+              {
+                "candidate_skus": [
+                  "TRN-004"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "同步带轮",
+                "matched_specification": "HTD-3M-24齿-8mm",
+                "material_name": "同步带轮",
+                "quantity": 50.0,
+                "rejection_reason": null,
+                "sku_code": "TRN-004",
+                "specification": "HTD-3M-24齿-8mm",
+                "unit": "个",
+                "unit_price": 22.05
+              },
+              {
+                "candidate_skus": [
+                  "BRG-041"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "深沟球轴承",
+                "matched_specification": "6004-2RZ",
+                "material_name": "深沟球轴承",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "BRG-041",
+                "specification": "6004-2RZ",
+                "unit": "套",
+                "unit_price": 36.0
+              },
+              {
+                "candidate_skus": [
+                  "FST-003"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "不锈钢内六角圆柱头螺钉",
+                "matched_specification": "304 M6×12",
+                "material_name": "不锈钢内六角圆柱头螺钉",
+                "quantity": 10.0,
+                "rejection_reason": null,
+                "sku_code": "FST-003",
+                "specification": "304 M6×12",
+                "unit": "个",
+                "unit_price": 0.28
+              },
+              {
+                "candidate_skus": [
+                  "TRN-048"
+                ],
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "match_basis": "catalog_name_spec_exact",
+                "match_score": 1.0,
+                "matched_material_name": "同步带轮",
+                "matched_specification": "HTD-8M-20齿-15mm",
+                "material_name": "同步带轮",
+                "quantity": 100.0,
+                "rejection_reason": null,
+                "sku_code": "TRN-048",
+                "specification": "HTD-8M-20齿-15mm",
+                "unit": "个",
+                "unit_price": 81.45
+              }
+            ],
+            "order_number": "PO-2026-01194",
+            "parsing_issues": [],
+            "total_amount": 208677.9
+          },
+          "message": "订单处理完成",
+          "parsed_order": {
+            "customer_name": "客户42号制造有限公司",
+            "items": [
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "丁腈防护手套",
+                "quantity": 500.0,
+                "specification": "NBR-XL-15mil 黑色",
+                "unit": "副",
+                "unit_price": 18.44
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "接近传感器",
+                "quantity": 100.0,
+                "specification": "LJ6A3-2-Z/BY",
+                "unit": "个",
+                "unit_price": 206.0
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "接近传感器",
+                "quantity": 10.0,
+                "specification": "LJ30A3-5-Z/BX",
+                "unit": "个",
+                "unit_price": 144.4
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "不锈钢球阀",
+                "quantity": 20.0,
+                "specification": "Q11F-16P DN25 全通径",
+                "unit": "个",
+                "unit_price": 56.5
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 20.0,
+                "specification": "RVVP 4×2.5mm² 耐油屏蔽",
+                "unit": "米",
+                "unit_price": 31.04
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "304不锈钢板",
+                "quantity": 500.0,
+                "specification": "1.5mm×1000×6000",
+                "unit": "kg",
+                "unit_price": 32.72
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 100.0,
+                "specification": "D16×100 4刃",
+                "unit": "支",
+                "unit_price": 94.84
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 100.0,
+                "specification": "RVVP 3×0.75mm² 耐油屏蔽",
+                "unit": "米",
+                "unit_price": 24.8
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "304不锈钢板",
+                "quantity": 500.0,
+                "specification": "2.0mm×1500×6000",
+                "unit": "kg",
+                "unit_price": 36.24
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "气缸",
+                "quantity": 200.0,
+                "specification": "SC-25×75",
+                "unit": "个",
+                "unit_price": 89.1
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "同步带轮",
+                "quantity": 20.0,
+                "specification": "HTD-8M-20齿-8mm",
+                "unit": "个",
+                "unit_price": 20.7
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "304不锈钢板",
+                "quantity": 50.0,
+                "specification": "1.0mm×1000×3000",
+                "unit": "kg",
+                "unit_price": 27.6
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "硬质合金立铣刀",
+                "quantity": 500.0,
+                "specification": "D6×60 4刃",
+                "unit": "支",
+                "unit_price": 42.52
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "不锈钢球阀",
+                "quantity": 500.0,
+                "specification": "Q11F-16P DN20 缩径",
+                "unit": "个",
+                "unit_price": 73.5
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "304不锈钢板",
+                "quantity": 50.0,
+                "specification": "3.0mm×1500×2000",
+                "unit": "kg",
+                "unit_price": 22.16
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "304不锈钢板",
+                "quantity": 50.0,
+                "specification": "1.5mm×1220×6000",
+                "unit": "kg",
+                "unit_price": 34.32
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 10.0,
+                "specification": "RVVP 3×0.75mm² 柔性屏蔽",
+                "unit": "米",
+                "unit_price": 15.2
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "丁腈防护手套",
+                "quantity": 10.0,
+                "specification": "NBR-XL-8mil 蓝色",
+                "unit": "副",
+                "unit_price": 5.84
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "屏蔽控制电缆",
+                "quantity": 10.0,
+                "specification": "RVVP 4×2.5mm² 普通屏蔽",
+                "unit": "米",
+                "unit_price": 11.84
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "接近传感器",
+                "quantity": 200.0,
+                "specification": "LJ8A3-5-Z/BX",
+                "unit": "个",
+                "unit_price": 127.6
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "丁腈防护手套",
+                "quantity": 500.0,
+                "specification": "NBR-XXL-18mil 黑色",
+                "unit": "副",
+                "unit_price": 20.12
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "同步带轮",
+                "quantity": 50.0,
+                "specification": "HTD-3M-24齿-8mm",
+                "unit": "个",
+                "unit_price": 22.05
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "深沟球轴承",
+                "quantity": 100.0,
+                "specification": "6004-2RZ",
+                "unit": "套",
+                "unit_price": 36.0
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "不锈钢内六角圆柱头螺钉",
+                "quantity": 10.0,
+                "specification": "304 M6×12",
+                "unit": "个",
+                "unit_price": 0.28
+              },
+              {
+                "confidence_score": 1.0,
+                "delivery_date": "2026-10-08",
+                "material_name": "同步带轮",
+                "quantity": 100.0,
+                "specification": "HTD-8M-20齿-15mm",
+                "unit": "个",
+                "unit_price": 81.45
+              }
+            ],
+            "order_number": "PO-2026-01194",
+            "parsing_confidence": 1.0,
+            "parsing_issues": [],
+            "total_amount": 208677.9
+          },
+          "risk_result": {
+            "issues": [
+              {
+                "description": "明细金额合计 208665.90 与订单总额 208677.90 不一致",
+                "issue_type": "line_total_mismatch",
+                "item_index": -1,
+                "severity": "high"
+              }
+            ],
+            "needs_confirmation": true,
+            "overall_confidence": 0.8
+          },
+          "status": "needs_confirmation"
+        },
+        "matched_order": {
+          "customer_name": "客户42号制造有限公司",
+          "items": [
+            {
+              "candidate_skus": [
+                "SAF-054"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "丁腈防护手套",
+              "matched_specification": "NBR-XL-15mil 黑色",
+              "material_name": "丁腈防护手套",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "SAF-054",
+              "specification": "NBR-XL-15mil 黑色",
+              "unit": "副",
+              "unit_price": 18.44
+            },
+            {
+              "candidate_skus": [
+                "SNS-031"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "接近传感器",
+              "matched_specification": "LJ6A3-2-Z/BY",
+              "material_name": "接近传感器",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "SNS-031",
+              "specification": "LJ6A3-2-Z/BY",
+              "unit": "个",
+              "unit_price": 206.0
+            },
+            {
+              "candidate_skus": [
+                "SNS-020"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "接近传感器",
+              "matched_specification": "LJ30A3-5-Z/BX",
+              "material_name": "接近传感器",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "SNS-020",
+              "specification": "LJ30A3-5-Z/BX",
+              "unit": "个",
+              "unit_price": 144.4
+            },
+            {
+              "candidate_skus": [
+                "VLV-003"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "不锈钢球阀",
+              "matched_specification": "Q11F-16P DN25 全通径",
+              "material_name": "不锈钢球阀",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "VLV-003",
+              "specification": "Q11F-16P DN25 全通径",
+              "unit": "个",
+              "unit_price": 56.5
+            },
+            {
+              "candidate_skus": [
+                "CBL-059"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "屏蔽控制电缆",
+              "matched_specification": "RVVP 4×2.5mm² 耐油屏蔽",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "CBL-059",
+              "specification": "RVVP 4×2.5mm² 耐油屏蔽",
+              "unit": "米",
+              "unit_price": 31.04
+            },
+            {
+              "candidate_skus": [
+                "MET-047"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "1.5mm×1000×6000",
+              "material_name": "304不锈钢板",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "MET-047",
+              "specification": "1.5mm×1000×6000",
+              "unit": "kg",
+              "unit_price": 32.72
+            },
+            {
+              "candidate_skus": [
+                "CUT-039"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "硬质合金立铣刀",
+              "matched_specification": "D16×100 4刃",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "CUT-039",
+              "specification": "D16×100 4刃",
+              "unit": "支",
+              "unit_price": 94.84
+            },
+            {
+              "candidate_skus": [
+                "CBL-046"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "屏蔽控制电缆",
+              "matched_specification": "RVVP 3×0.75mm² 耐油屏蔽",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "CBL-046",
+              "specification": "RVVP 3×0.75mm² 耐油屏蔽",
+              "unit": "米",
+              "unit_price": 24.8
+            },
+            {
+              "candidate_skus": [
+                "MET-058"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "2.0mm×1500×6000",
+              "material_name": "304不锈钢板",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "MET-058",
+              "specification": "2.0mm×1500×6000",
+              "unit": "kg",
+              "unit_price": 36.24
+            },
+            {
+              "candidate_skus": [
+                "PNE-012"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "气缸",
+              "matched_specification": "SC-25×75",
+              "material_name": "气缸",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "PNE-012",
+              "specification": "SC-25×75",
+              "unit": "个",
+              "unit_price": 89.1
+            },
+            {
+              "candidate_skus": [
+                "TRN-003"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "同步带轮",
+              "matched_specification": "HTD-8M-20齿-8mm",
+              "material_name": "同步带轮",
+              "quantity": 20.0,
+              "rejection_reason": null,
+              "sku_code": "TRN-003",
+              "specification": "HTD-8M-20齿-8mm",
+              "unit": "个",
+              "unit_price": 20.7
+            },
+            {
+              "candidate_skus": [
+                "MET-031"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "1.0mm×1000×3000",
+              "material_name": "304不锈钢板",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "MET-031",
+              "specification": "1.0mm×1000×3000",
+              "unit": "kg",
+              "unit_price": 27.6
+            },
+            {
+              "candidate_skus": [
+                "CUT-015"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "硬质合金立铣刀",
+              "matched_specification": "D6×60 4刃",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "CUT-015",
+              "specification": "D6×60 4刃",
+              "unit": "支",
+              "unit_price": 42.52
+            },
+            {
+              "candidate_skus": [
+                "VLV-007"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "不锈钢球阀",
+              "matched_specification": "Q11F-16P DN20 缩径",
+              "material_name": "不锈钢球阀",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "VLV-007",
+              "specification": "Q11F-16P DN20 缩径",
+              "unit": "个",
+              "unit_price": 73.5
+            },
+            {
+              "candidate_skus": [
+                "MET-014"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "3.0mm×1500×2000",
+              "material_name": "304不锈钢板",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "MET-014",
+              "specification": "3.0mm×1500×2000",
+              "unit": "kg",
+              "unit_price": 22.16
+            },
+            {
+              "candidate_skus": [
+                "MET-052"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "304不锈钢板",
+              "matched_specification": "1.5mm×1220×6000",
+              "material_name": "304不锈钢板",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "MET-052",
+              "specification": "1.5mm×1220×6000",
+              "unit": "kg",
+              "unit_price": 34.32
+            },
+            {
+              "candidate_skus": [
+                "CBL-026"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "屏蔽控制电缆",
+              "matched_specification": "RVVP 3×0.75mm² 柔性屏蔽",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "CBL-026",
+              "specification": "RVVP 3×0.75mm² 柔性屏蔽",
+              "unit": "米",
+              "unit_price": 15.2
+            },
+            {
+              "candidate_skus": [
+                "SAF-009"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "丁腈防护手套",
+              "matched_specification": "NBR-XL-8mil 蓝色",
+              "material_name": "丁腈防护手套",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "SAF-009",
+              "specification": "NBR-XL-8mil 蓝色",
+              "unit": "副",
+              "unit_price": 5.84
+            },
+            {
+              "candidate_skus": [
+                "CBL-019"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "屏蔽控制电缆",
+              "matched_specification": "RVVP 4×2.5mm² 普通屏蔽",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "CBL-019",
+              "specification": "RVVP 4×2.5mm² 普通屏蔽",
+              "unit": "米",
+              "unit_price": 11.84
+            },
+            {
+              "candidate_skus": [
+                "SNS-017"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "接近传感器",
+              "matched_specification": "LJ8A3-5-Z/BX",
+              "material_name": "接近传感器",
+              "quantity": 200.0,
+              "rejection_reason": null,
+              "sku_code": "SNS-017",
+              "specification": "LJ8A3-5-Z/BX",
+              "unit": "个",
+              "unit_price": 127.6
+            },
+            {
+              "candidate_skus": [
+                "SAF-060"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "丁腈防护手套",
+              "matched_specification": "NBR-XXL-18mil 黑色",
+              "material_name": "丁腈防护手套",
+              "quantity": 500.0,
+              "rejection_reason": null,
+              "sku_code": "SAF-060",
+              "specification": "NBR-XXL-18mil 黑色",
+              "unit": "副",
+              "unit_price": 20.12
+            },
+            {
+              "candidate_skus": [
+                "TRN-004"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "同步带轮",
+              "matched_specification": "HTD-3M-24齿-8mm",
+              "material_name": "同步带轮",
+              "quantity": 50.0,
+              "rejection_reason": null,
+              "sku_code": "TRN-004",
+              "specification": "HTD-3M-24齿-8mm",
+              "unit": "个",
+              "unit_price": 22.05
+            },
+            {
+              "candidate_skus": [
+                "BRG-041"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "深沟球轴承",
+              "matched_specification": "6004-2RZ",
+              "material_name": "深沟球轴承",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "BRG-041",
+              "specification": "6004-2RZ",
+              "unit": "套",
+              "unit_price": 36.0
+            },
+            {
+              "candidate_skus": [
+                "FST-003"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "不锈钢内六角圆柱头螺钉",
+              "matched_specification": "304 M6×12",
+              "material_name": "不锈钢内六角圆柱头螺钉",
+              "quantity": 10.0,
+              "rejection_reason": null,
+              "sku_code": "FST-003",
+              "specification": "304 M6×12",
+              "unit": "个",
+              "unit_price": 0.28
+            },
+            {
+              "candidate_skus": [
+                "TRN-048"
+              ],
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "match_basis": "catalog_name_spec_exact",
+              "match_score": 1.0,
+              "matched_material_name": "同步带轮",
+              "matched_specification": "HTD-8M-20齿-15mm",
+              "material_name": "同步带轮",
+              "quantity": 100.0,
+              "rejection_reason": null,
+              "sku_code": "TRN-048",
+              "specification": "HTD-8M-20齿-15mm",
+              "unit": "个",
+              "unit_price": 81.45
+            }
+          ],
+          "order_number": "PO-2026-01194",
+          "parsing_issues": [],
+          "total_amount": 208677.9
+        },
+        "order_id": "c1a66f99-ba25-4657-a9c0-c13dfa7b2db1",
+        "order_text": "{\"document_type\": \"excel\", \"sheet_name\": \"Order Form\", \"rows\": [[\"采购订单 / PURCHASE ORDER\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"订单编号\", \"PO-2026-01194\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"客户名称\", \"客户42号制造有限公司\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"下单日期\", \"2026-08-18\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"要求交期\", \"2026-10-08\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"币种\", \"CNY\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"结算方式\", \"月结30天\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"序号\", \"物料名称\", \"规格型号\", \"数量\", \"单位\", \"含税单价\", \"小计\", \"交付备注\"], [1, \"丁腈防护手套\", \"NBR-XL-15mil 黑色\", 500, \"副\", 18.44, 9232, \"按订单交付\"], [2, \"接近传感器\", \"LJ6A3-2-Z/BY\", 100, \"个\", 206, 20600, \"按订单交付\"], [3, \"接近传感器\", \"LJ30A3-5-Z/BX\", 10, \"个\", 144.4, 1444, \"分批交付\"], [4, \"不锈钢球阀\", \"Q11F-16P DN25 全通径\", 20, \"个\", 56.5, 1130, \"按订单交付\"], [5, \"屏蔽控制电缆\", \"RVVP 4×2.5mm² 耐油屏蔽\", 20, \"米\", 31.04, 620.8, \"按订单交付\"], [6, \"304不锈钢板\", \"1.5mm×1000×6000\", 500, \"kg\", 32.72, 16360, \"按订单交付\"], [7, \"硬质合金立铣刀\", \"D16×100 4刃\", 100, \"支\", 94.84, 9484, \"按订单交付\"], [8, \"屏蔽控制电缆\", \"RVVP 3×0.75mm² 耐油屏蔽\", 100, \"米\", 24.8, 2480, \"按订单交付\"], [9, \"304不锈钢板\", \"2.0mm×1500×6000\", 500, \"kg\", 36.24, 18120, \"按订单交付\"], [10, \"气缸\", \"SC-25×75\", 200, \"个\", 89.1, 17820, \"分批交付\"], [11, \"同步带轮\", \"HTD-8M-20齿-8mm\", 20, \"个\", 20.7, 414, \"按订单交付\"], [12, \"304不锈钢板\", \"1.0mm×1000×3000\", 50, \"kg\", 27.6, 1380, \"按订单交付\"], [13, \"硬质合金立铣刀\", \"D6×60 4刃\", 500, \"支\", 42.52, 21260, \"按订单交付\"], [14, \"不锈钢球阀\", \"Q11F-16P DN20 缩径\", 500, \"个\", 73.5, 36750, \"按订单交付\"], [15, \"304不锈钢板\", \"3.0mm×1500×2000\", 50, \"kg\", 22.16, 1108, \"按订单交付\"], [16, \"304不锈钢板\", \"1.5mm×1220×6000\", 50, \"kg\", 34.32, 1716, \"按订单交付\"], [17, \"屏蔽控制电缆\", \"RVVP 3×0.75mm² 柔性屏蔽\", 10, \"米\", 15.2, 152, \"分批交付\"], [18, \"丁腈防护手套\", \"NBR-XL-8mil 蓝色\", 10, \"副\", 5.84, 58.4, \"按订单交付\"], [19, \"屏蔽控制电缆\", \"RVVP 4×2.5mm² 普通屏蔽\", 10, \"米\", 11.84, 118.4, \"按订单交付\"], [20, \"接近传感器\", \"LJ8A3-5-Z/BX\", 200, \"个\", 127.6, 25520, \"按订单交付\"], [21, \"丁腈防护手套\", \"NBR-XXL-18mil 黑色\", 500, \"副\", 20.12, 10060, \"按订单交付\"], [22, \"同步带轮\", \"HTD-3M-24齿-8mm\", 50, \"个\", 22.05, 1102.5, \"按订单交付\"], [23, \"深沟球轴承\", \"6004-2RZ\", 100, \"套\", 36, 3600, \"按订单交付\"], [24, \"不锈钢内六角圆柱头螺钉\", \"304 M6×12\", 10, \"个\", 0.28, 2.8, \"分批交付\"], [25, \"同步带轮\", \"HTD-8M-20齿-15mm\", 100, \"个\", 81.45, 8145, \"按订单交付\"], [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"], [\"\", \"\", \"\", \"\", \"\", \"订单总额\", 208677.9, \"含税，金额以系统复核为准\"]]}",
+        "parsed_order": {
+          "customer_name": "客户42号制造有限公司",
+          "items": [
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "丁腈防护手套",
+              "quantity": 500.0,
+              "specification": "NBR-XL-15mil 黑色",
+              "unit": "副",
+              "unit_price": 18.44
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "接近传感器",
+              "quantity": 100.0,
+              "specification": "LJ6A3-2-Z/BY",
+              "unit": "个",
+              "unit_price": 206.0
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "接近传感器",
+              "quantity": 10.0,
+              "specification": "LJ30A3-5-Z/BX",
+              "unit": "个",
+              "unit_price": 144.4
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "不锈钢球阀",
+              "quantity": 20.0,
+              "specification": "Q11F-16P DN25 全通径",
+              "unit": "个",
+              "unit_price": 56.5
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 20.0,
+              "specification": "RVVP 4×2.5mm² 耐油屏蔽",
+              "unit": "米",
+              "unit_price": 31.04
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "304不锈钢板",
+              "quantity": 500.0,
+              "specification": "1.5mm×1000×6000",
+              "unit": "kg",
+              "unit_price": 32.72
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 100.0,
+              "specification": "D16×100 4刃",
+              "unit": "支",
+              "unit_price": 94.84
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 100.0,
+              "specification": "RVVP 3×0.75mm² 耐油屏蔽",
+              "unit": "米",
+              "unit_price": 24.8
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "304不锈钢板",
+              "quantity": 500.0,
+              "specification": "2.0mm×1500×6000",
+              "unit": "kg",
+              "unit_price": 36.24
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "气缸",
+              "quantity": 200.0,
+              "specification": "SC-25×75",
+              "unit": "个",
+              "unit_price": 89.1
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "同步带轮",
+              "quantity": 20.0,
+              "specification": "HTD-8M-20齿-8mm",
+              "unit": "个",
+              "unit_price": 20.7
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "304不锈钢板",
+              "quantity": 50.0,
+              "specification": "1.0mm×1000×3000",
+              "unit": "kg",
+              "unit_price": 27.6
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "硬质合金立铣刀",
+              "quantity": 500.0,
+              "specification": "D6×60 4刃",
+              "unit": "支",
+              "unit_price": 42.52
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "不锈钢球阀",
+              "quantity": 500.0,
+              "specification": "Q11F-16P DN20 缩径",
+              "unit": "个",
+              "unit_price": 73.5
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "304不锈钢板",
+              "quantity": 50.0,
+              "specification": "3.0mm×1500×2000",
+              "unit": "kg",
+              "unit_price": 22.16
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "304不锈钢板",
+              "quantity": 50.0,
+              "specification": "1.5mm×1220×6000",
+              "unit": "kg",
+              "unit_price": 34.32
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 10.0,
+              "specification": "RVVP 3×0.75mm² 柔性屏蔽",
+              "unit": "米",
+              "unit_price": 15.2
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "丁腈防护手套",
+              "quantity": 10.0,
+              "specification": "NBR-XL-8mil 蓝色",
+              "unit": "副",
+              "unit_price": 5.84
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "屏蔽控制电缆",
+              "quantity": 10.0,
+              "specification": "RVVP 4×2.5mm² 普通屏蔽",
+              "unit": "米",
+              "unit_price": 11.84
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "接近传感器",
+              "quantity": 200.0,
+              "specification": "LJ8A3-5-Z/BX",
+              "unit": "个",
+              "unit_price": 127.6
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "丁腈防护手套",
+              "quantity": 500.0,
+              "specification": "NBR-XXL-18mil 黑色",
+              "unit": "副",
+              "unit_price": 20.12
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "同步带轮",
+              "quantity": 50.0,
+              "specification": "HTD-3M-24齿-8mm",
+              "unit": "个",
+              "unit_price": 22.05
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "深沟球轴承",
+              "quantity": 100.0,
+              "specification": "6004-2RZ",
+              "unit": "套",
+              "unit_price": 36.0
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "不锈钢内六角圆柱头螺钉",
+              "quantity": 10.0,
+              "specification": "304 M6×12",
+              "unit": "个",
+              "unit_price": 0.28
+            },
+            {
+              "confidence_score": 1.0,
+              "delivery_date": "2026-10-08",
+              "material_name": "同步带轮",
+              "quantity": 100.0,
+              "specification": "HTD-8M-20齿-15mm",
+              "unit": "个",
+              "unit_price": 81.45
+            }
+          ],
+          "order_number": "PO-2026-01194",
+          "parsing_confidence": 1.0,
+          "parsing_issues": [],
+          "total_amount": 208677.9
+        },
+        "processing_diagnostics": {
+          "matching": {
+            "runner_latency_ms": 1.03,
+            "success": true,
+            "usage": {}
+          },
+          "parser_general": {
+            "model_calls": [
+              {
+                "call": 1,
+                "latency_ms": 26022.05,
+                "total_tokens": 5420,
+                "usage_reported": true
+              }
+            ],
+            "runner_latency_ms": 26024.62,
+            "self_correction": null,
+            "success": true,
+            "usage": {
+              "attempted_calls": 1,
+              "completion_tokens": 2472,
+              "prompt_tokens": 2948,
+              "reported_calls": 1,
+              "total_tokens": 5420
+            }
+          },
+          "risk_control": {
+            "runner_latency_ms": 5.17,
+            "success": true,
+            "usage": {}
+          }
+        },
+        "review_actions": [],
+        "risk_result": {
+          "issues": [
+            {
+              "description": "明细金额合计 208665.90 与订单总额 208677.90 不一致",
+              "issue_type": "line_total_mismatch",
+              "item_index": -1,
+              "severity": "high"
+            }
+          ],
+          "needs_confirmation": true,
+          "overall_confidence": 0.8
+        },
+        "status": "needs_confirmation",
+        "transition_history": [
+          {
+            "from_status": null,
+            "reason": "order_created",
+            "timestamp": "2026-09-12T01:55:54.134638",
+            "to_status": "pending"
+          },
+          {
+            "from_status": "pending",
+            "reason": "parser_started",
+            "timestamp": "2026-09-12T01:55:54.148956",
+            "to_status": "parsing"
+          },
+          {
+            "from_status": "parsing",
+            "reason": "matching_started",
+            "timestamp": "2026-09-12T01:56:20.262825",
+            "to_status": "matching"
+          },
+          {
+            "from_status": "matching",
+            "reason": "risk_check_started",
+            "timestamp": "2026-09-12T01:56:20.341062",
+            "to_status": "risk_checking"
+          },
+          {
+            "from_status": "risk_checking",
+            "reason": "requires_manual_confirmation",
+            "timestamp": "2026-09-12T01:56:20.420899",
+            "to_status": "needs_confirmation"
+          }
+        ],
+        "updated_at": "2026-09-12T01:56:20.420899"
+      },
+      "checks_passed": true
+    }
+  ]
+}
