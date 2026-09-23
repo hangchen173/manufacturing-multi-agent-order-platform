@@ -19,7 +19,7 @@ class ApplicationContainer:
         with self._initialization_lock:
             if self._orchestrator is not None:
                 return
-            from application.agents import MatchingAgent
+            from application.agents import MatchingAgent, ReviewAssistantAgent
             from infrastructure.vector_store import FAISSManager
             from infrastructure.vector_store.catalog import load_material_catalog, validate_catalog_index
 
@@ -32,6 +32,7 @@ class ApplicationContainer:
             orchestrator = OrderProcessingOrchestrator(
                 config=self.config,
                 matching_agent=MatchingAgent(faiss_manager=store, config=self.config),
+                review_assistant=ReviewAssistantAgent(faiss_manager=store, config=self.config),
             )
             orchestrator.order_manager.fail_stale_processing_orders()
             self._orchestrator = orchestrator

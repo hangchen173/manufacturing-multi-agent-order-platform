@@ -2,7 +2,13 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
-from application.agents import MatchingAgent, ParserAgent, ParserScenario, RiskControlAgent
+from application.agents import (
+    MatchingAgent,
+    ParserAgent,
+    ParserScenario,
+    ReviewAssistantAgent,
+    RiskControlAgent,
+)
 from application.pipeline import AgentPipelineStage
 from application.services import OrderManager
 from config import Config
@@ -27,6 +33,7 @@ class OrderProcessingOrchestrator:
         parser_agent_vl: Optional[ParserAgent] = None,
         matching_agent: Optional[MatchingAgent] = None,
         risk_agent: Optional[RiskControlAgent] = None,
+        review_assistant: Optional[ReviewAssistantAgent] = None,
     ):
         self.config = config or Config()
         self.order_manager = order_manager or OrderManager(config=self.config)
@@ -43,6 +50,7 @@ class OrderProcessingOrchestrator:
         )
         self.matching_agent = matching_agent or MatchingAgent(config=self.config)
         self.risk_agent = risk_agent or RiskControlAgent(config=self.config)
+        self.review_assistant = review_assistant or ReviewAssistantAgent(config=self.config)
 
         self.parser_stage_general = AgentPipelineStage(
             name="parser_general",
@@ -396,6 +404,32 @@ class OrderProcessingOrchestrator:
             "message": "订单已确认" if action == "confirm" else "订单已拒绝",
         }
     
+    def generate_review_suggestion(self, order_id: str) -> Dict[str, Any]:
+        order = self.order_manager.get_order(order_id)
+        if not order:
+            return {"success": False, "message": "订单不存在"}
+        if order.status != OrderStatus.NEEDS_CONFIRMATION:
+            return {
+                "success": False,
+                "message": "仅待人工确认状态的订单可以生成审核参考",
+            }
+        if not order.final_result or order.final_result.matched_order is None:
+            return {"success": False, "message": "订单缺少匹配或风控结果，无法生成审核参考"}
+
+        result = self.review_assistant.run({
+            "matched_order": order.final_result.matched_order,
+            "risk_result": order.final_result.risk_result,
+        })
+        if not result.get("success"):
+            return {"success": False, "message": result.get("message", "审核参考生成失败")}
+
+        return {
+            "success": True,
+            "order_id": order_id,
+            "review_suggestion": result["review_suggestion"],
+            "message": result["message"],
+        }
+
     def get_order_status(self, order_id: str) -> Optional[Dict[str, Any]]:
         return self.order_manager.get_order_status(order_id)
 

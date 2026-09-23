@@ -42,6 +42,17 @@ class FakeOrchestrator:
             "message": confirmation["action"],
         }
 
+    def generate_review_suggestion(self, order_id):
+        if order_id == "order-1":
+            return {
+                "success": True,
+                "order_id": order_id,
+                "review_suggestion": {"summary": "审核参考", "references": [], "retrieval": []},
+            }
+        if order_id == "completed-1":
+            return {"success": False, "message": "仅待人工确认状态的订单可以生成审核参考"}
+        return {"success": False, "message": "订单不存在"}
+
 
 class HttpApiTests(unittest.TestCase):
     def test_sdk_timeout_is_queryable_and_does_not_retry(self):
@@ -156,6 +167,26 @@ class HttpApiTests(unittest.TestCase):
 
     def test_unknown_order_is_not_found(self):
         response = self.client.get("/api/orders/missing")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_review_suggestion_is_generated_for_confirmation_order(self):
+        response = self.client.post("/api/orders/order-1/review-suggestion")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["success"])
+        self.assertEqual(
+            response.json["data"]["review_suggestion"]["summary"], "审核参考"
+        )
+
+    def test_review_suggestion_for_completed_order_is_conflicted(self):
+        response = self.client.post("/api/orders/completed-1/review-suggestion")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(response.json["success"])
+
+    def test_review_suggestion_for_unknown_order_is_not_found(self):
+        response = self.client.post("/api/orders/missing/review-suggestion")
 
         self.assertEqual(response.status_code, 404)
 

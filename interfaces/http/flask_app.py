@@ -108,6 +108,17 @@ def create_app(
 
         return jsonify({"success": True, "data": to_jsonable(order)})
 
+    @app.route("/api/orders/<order_id>/review-suggestion", methods=["POST"])
+    def generate_review_suggestion(order_id: str):
+        result = container.orchestrator.generate_review_suggestion(order_id)
+        if not result.get("success") and result.get("message") == "订单不存在":
+            status_code = 404
+        elif not result.get("success"):
+            status_code = 409
+        else:
+            status_code = 200
+        return jsonify({"success": result.get("success", False), "data": to_jsonable(result)}), status_code
+
     @app.route("/api/confirm/<order_id>", methods=["POST"])
     def confirm_order(order_id: str):
         data = request.get_json(silent=True) or {}
