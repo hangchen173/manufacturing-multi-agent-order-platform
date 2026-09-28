@@ -2,6 +2,7 @@ import threading
 import unittest
 from pathlib import Path
 
+from domain.agent_roles import AgentRole
 from evaluation.run_evaluation import (
     create_evaluation_orchestrator,
     run_concurrent_evaluation,
@@ -56,13 +57,13 @@ class ConcurrentEvaluationIsolationTests(unittest.TestCase):
         barrier = threading.Barrier(self.WORKER_COUNT)
 
         def process(document_path, orchestrator):
-            agent = orchestrator.parser_agent_general
-            agent.last_self_correction = {"attempts": 2, "marker": document_path.stem}
+            extractor = orchestrator.agents[AgentRole.EXTRACTOR]
+            extractor.last_call_records = [{"call": 1, "marker": document_path.stem}]
             barrier.wait(timeout=10)
             return {
                 "document_id": document_path.stem,
-                "marker": agent.last_self_correction["marker"],
-                "parser_id": id(agent),
+                "marker": extractor.last_call_records[0]["marker"],
+                "parser_id": id(extractor),
             }
 
         outcomes = self._run(process)

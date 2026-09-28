@@ -55,49 +55,51 @@ class FakeOrchestrator:
 
 
 class HttpApiTests(unittest.TestCase):
-    def test_sdk_timeout_is_queryable_and_does_not_retry(self):
+    def test_sdk_timeout_is_retried_then_queryable_without_usage(self):
         import httpx
         from openai import OpenAI
-        from application.agents import ParserAgent
-        from application.orchestrators import OrderProcessingOrchestrator
-        from application.services import OrderManager
-        from tests.fakes import InMemoryOrderRepository
-        from tests.test_order_flow import FixedMatcher, FixedRiskControl
+
+        from application.agents import Extractor
+        from tests.support import build_harness
 
         config = Config()
         config.model.api_key = "test-only"
         config.data.order_auto_archive_days = 0
-        parser = ParserAgent(config=config)
+        config.data.data_dir = self.directory.name
+
         calls = []
 
         def timeout(request):
             calls.append(request)
             raise httpx.ReadTimeout("simulated upstream timeout", request=request)
 
+        extractor = Extractor(config=config)
+        llm = extractor._get_llm()
         with httpx.Client(transport=httpx.MockTransport(timeout)) as transport:
-            parser._get_llm().client = OpenAI(
+            llm.client = OpenAI(
                 api_key="test-only", http_client=transport, max_retries=0
             ).chat.completions
-            manager = OrderManager(config=config, repository=InMemoryOrderRepository())
-            orchestrator = OrderProcessingOrchestrator(
-                config=config, order_manager=manager, parser_agent_general=parser,
-                matching_agent=FixedMatcher(), risk_agent=FixedRiskControl(),
-            )
+            harness = build_harness(llm=llm, config=config)
             app = create_app(config=config, container=SimpleNamespace(
-                orchestrator=orchestrator, readiness=lambda: {"materials": 720}
+                orchestrator=harness.orchestrator, readiness=lambda: {"materials": 720}
             ))
             client = app.test_client()
             response = client.post("/api/upload_text", json={"order_text": "1 螺丝 M8 10 个 1元"})
+
             self.assertEqual(response.status_code, 400)
             self.assertFalse(response.json["success"])
             result = response.json["data"]
+
             detail = client.get("/api/orders/" + result["order_id"])
             self.assertEqual(detail.status_code, 200)
             self.assertEqual(detail.json["data"]["status"], "failed")
-            self.assertEqual(len(calls), 1)
-            diagnostics = result["diagnostics"]["parser_general"]
-            self.assertEqual(diagnostics["model_calls"][0]["error_type"], "APITimeoutError")
-            self.assertEqual(diagnostics["usage"]["reported_calls"], 0)
+
+        # SDK 超时属可重试的瞬态错误：有限重试，且不注入结构修正反馈
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(result["usage"]["reported_calls"], 0)
+        node = result["diagnostics"]["node:extractor"]
+        self.assertFalse(node["success"])
+        self.assertIn("APITimeoutError", node["error"])
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()

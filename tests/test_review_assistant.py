@@ -2,19 +2,22 @@ import unittest
 
 from langchain_core.messages import AIMessage
 
-from application.agents import ReviewAssistantAgent
-from application.orchestrators import OrderProcessingOrchestrator
-from application.services import OrderManager
+from application.agents import ReviewAssistant
 from config import Config
+from domain.agent_roles import AgentRole
 from domain.models import (
     MatchedOrder,
     MatchedOrderItem,
     RiskCheckResult,
     RiskIssue,
 )
-from tests.fakes import InMemoryOrderRepository
-from tests.test_matching_ambiguity import CBL_003, CBL_043, CATALOG, FakeFAISSManager
-from tests.test_order_flow import FixedMatcher, FixedParser, FixedRiskControl
+from tests.support import (
+    FakeFAISSManager,
+    build_harness,
+    item,
+    order_payload,
+)
+from tests.test_matching_ambiguity import CBL_003, CBL_043, CATALOG
 
 
 class CapturingLLM:
@@ -83,22 +86,19 @@ def _build_risk_result():
     )
 
 
-class ReviewAssistantAgentTests(unittest.TestCase):
+class ReviewAssistantTests(unittest.TestCase):
     def _make_agent(self, llm, search_results=None):
         manager = FakeFAISSManager(CATALOG, search_results=search_results or [
             (CBL_003, 0.1),
             (CBL_043, 0.5),
         ])
-        return ReviewAssistantAgent(llm=llm, faiss_manager=manager, config=Config())
+        return ReviewAssistant(llm=llm, faiss_manager=manager, config=Config())
 
     def test_retrieved_materials_augment_llm_prompt(self):
         llm = CapturingLLM()
         agent = self._make_agent(llm)
 
-        result = agent.run({
-            "matched_order": _build_risky_order(),
-            "risk_result": _build_risk_result(),
-        })
+        result = agent.suggest(_build_risky_order(), _build_risk_result())
 
         self.assertTrue(result["success"])
         suggestion = result["review_suggestion"]
@@ -126,16 +126,13 @@ class ReviewAssistantAgentTests(unittest.TestCase):
             def search(self, _query, k=3):
                 raise RuntimeError("index unavailable")
 
-        agent = ReviewAssistantAgent(
+        agent = ReviewAssistant(
             llm=CapturingLLM(),
             faiss_manager=FailingSearchManager(CATALOG),
             config=Config(),
         )
 
-        result = agent.run({
-            "matched_order": _build_risky_order(),
-            "risk_result": _build_risk_result(),
-        })
+        result = agent.suggest(_build_risky_order(), _build_risk_result())
 
         self.assertTrue(result["success"])
         reference_skus = [
@@ -146,7 +143,7 @@ class ReviewAssistantAgentTests(unittest.TestCase):
     def test_missing_required_keys_returns_failure(self):
         agent = self._make_agent(CapturingLLM())
 
-        result = agent.run({"matched_order": _build_risky_order()})
+        result = agent.suggest(_build_risky_order(), None)
 
         self.assertFalse(result["success"])
         self.assertIn("risk_result", result["message"])
@@ -154,25 +151,22 @@ class ReviewAssistantAgentTests(unittest.TestCase):
     def test_without_risk_issues_no_suggestion_is_generated(self):
         agent = self._make_agent(CapturingLLM())
 
-        result = agent.run({
-            "matched_order": _build_risky_order(),
-            "risk_result": RiskCheckResult(
-                needs_confirmation=False, issues=[], overall_confidence=1.0
-            ),
-        })
+        result = agent.suggest(_build_risky_order(), RiskCheckResult(
+            needs_confirmation=False, issues=[], overall_confidence=1.0
+        ))
 
         self.assertFalse(result["success"])
         self.assertIsNone(result["review_suggestion"])
 
 
-class ManualReviewRiskControl:
-    def run(self, _input_data):
-        return {"success": True, "risk_result": _build_risk_result()}
-
-
 class StubReviewAssistant:
-    def run(self, input_data):
-        assert "matched_order" in input_data and "risk_result" in input_data
+    """桩：记录 suggest 的入参，返回固定审核参考。"""
+
+    def __init__(self):
+        self.calls = []
+
+    def suggest(self, matched_order, risk_result):
+        self.calls.append((matched_order, risk_result))
         return {
             "success": True,
             "review_suggestion": {
@@ -184,47 +178,65 @@ class StubReviewAssistant:
         }
 
 
-def _build_orchestrator(risk_agent):
-    config = Config()
-    manager = OrderManager(repository=InMemoryOrderRepository(), config=config)
-    return OrderProcessingOrchestrator(
-        config=config,
-        order_manager=manager,
-        parser_agent_general=FixedParser(),
-        matching_agent=FixedMatcher(),
-        risk_agent=risk_agent,
-        review_assistant=StubReviewAssistant(),
-    )
+# 缺区分限定词：确定性路径拒识、向量召回低分候选 → 送人工审核
+SUFFIX_CATALOG = [
+    {"sku_code": "ELC-025", "material_name": "交流接触器",
+     "specification": "CJX2-0910 AC220V 01", "unit": "个", "reference_price": 215.60,
+     "category": "电气", "aliases": ["CJX2 9A 220V"]},
+]
+
+# 名称与规格完全一致：自动通过，不需要人工确认
+PLAIN_CATALOG = [
+    {"sku_code": "SKU-001", "material_name": "螺丝", "specification": "M8",
+     "unit": "个", "reference_price": 1.0, "category": "紧固件", "aliases": []},
+]
 
 
 class ReviewSuggestionOrchestratorTests(unittest.TestCase):
+    def _pending_harness(self):
+        store = FakeFAISSManager(SUFFIX_CATALOG, search_results=[(SUFFIX_CATALOG[0], 0.5)])
+        harness = build_harness(
+            payloads=[order_payload([item("交流接触器", "CJX2-0910 AC220V", 10, "个", 200.0)])],
+            faiss_manager=store,
+        )
+        stub = StubReviewAssistant()
+        # orchestrator / supervisor / executor 共享同一个 agents 字典，替换即全局生效
+        harness.agents[AgentRole.REVIEW_ASSISTANT] = stub
+        return harness, stub
+
     def test_suggestion_available_only_for_pending_confirmation_order(self):
-        orchestrator = _build_orchestrator(ManualReviewRiskControl())
-        processed = orchestrator.process_order_from_text("订单文本")
+        harness, stub = self._pending_harness()
+        processed = harness.orchestrator.process_order_from_text(
+            "1 交流接触器 CJX2-0910 AC220V 10 个 200.0"
+        )
         self.assertTrue(processed["needs_confirmation"])
 
-        result = orchestrator.generate_review_suggestion(processed["order_id"])
+        result = harness.orchestrator.generate_review_suggestion(processed["order_id"])
 
         self.assertTrue(result["success"])
         self.assertEqual(result["review_suggestion"]["summary"], "RAG 审核建议（桩）")
         self.assertEqual(
             result["review_suggestion"]["references"], [{"sku_code": "CBL-003"}]
         )
+        self.assertEqual(len(stub.calls), 1)
 
     def test_completed_order_rejects_suggestion_request(self):
-        orchestrator = _build_orchestrator(FixedRiskControl())
-        processed = orchestrator.process_order_from_text("订单文本")
+        harness = build_harness(
+            payloads=[order_payload([item("螺丝", "M8", 10, "个", 1.0)])],
+            catalog=PLAIN_CATALOG,
+        )
+        processed = harness.orchestrator.process_order_from_text("1 螺丝 M8 10 个 1.0")
         self.assertFalse(processed["needs_confirmation"])
 
-        result = orchestrator.generate_review_suggestion(processed["order_id"])
+        result = harness.orchestrator.generate_review_suggestion(processed["order_id"])
 
         self.assertFalse(result["success"])
         self.assertIn("待人工确认", result["message"])
 
     def test_unknown_order_returns_failure(self):
-        orchestrator = _build_orchestrator(ManualReviewRiskControl())
+        harness, _ = self._pending_harness()
 
-        result = orchestrator.generate_review_suggestion("nonexistent-id")
+        result = harness.orchestrator.generate_review_suggestion("nonexistent-id")
 
         self.assertFalse(result["success"])
         self.assertEqual(result["message"], "订单不存在")

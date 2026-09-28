@@ -16,7 +16,6 @@ from config import Config
 from domain.models import FinalOrderResult, OrderStatus, ParsedOrder
 from infrastructure.repositories import PostgresOrderRepository
 from tests.fakes import InMemoryOrderRepository
-from tests.test_order_flow import FixedMatcher, FixedParser, FixedRiskControl
 
 
 class StorageContract:
@@ -34,11 +33,8 @@ class StorageContract:
         return order_id
 
     def orchestrator(self, manager):
-        return OrderProcessingOrchestrator(
-            config=manager.config, order_manager=manager,
-            parser_agent_general=FixedParser(), matching_agent=FixedMatcher(),
-            risk_agent=FixedRiskControl(),
-        )
+        # 仅用于 confirm/reject 的并发 CAS 验证，不触发任何 Agent 业务链路。
+        return OrderProcessingOrchestrator(order_manager=manager, config=manager.config)
 
     def test_independent_managers_do_not_lose_orders_or_updates(self):
         first, second = self.manager(), self.manager(self.second_repository)
