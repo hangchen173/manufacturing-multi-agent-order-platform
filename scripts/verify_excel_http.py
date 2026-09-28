@@ -12,7 +12,6 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from application.agents import ParserAgent
 from domain.models import ParsedOrder
 from evaluation.run_evaluation import fingerprint_files
 
@@ -55,7 +54,9 @@ def main():
             parsed = ParsedOrder(**detail["parsed_order"])
             assert detail["document_type"] == "excel"
             assert len(parsed.items) == count
-            assert not ParserAgent()._detect_excel_cell_problems(parsed, detail["order_text"])
+            # 溯源验证（GroundingVerifier）未对该 Excel 发出任何挑战，等价于旧
+            # `_detect_excel_cell_problems` 无问题。
+            assert not result["diagnostics"]["parse"]["challenges"]
             assert not parsed.parsing_issues
             assert all(row.delivery_date == date for row in parsed.items)
             assert result["business_decision"]["action"] == expected_action

@@ -10,7 +10,7 @@ import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from application.agents.parser_agent import prompt_fingerprint
+from application.agents import prompt_fingerprint
 
 
 def main():

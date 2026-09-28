@@ -19,7 +19,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from application.agents.parser_agent import prompt_fingerprint
+from application.agents import prompt_fingerprint
 from application.orchestrators import OrderProcessingOrchestrator
 from application.services import OrderManager
 from config import Config
@@ -31,7 +31,7 @@ from domain.constants import (
 )
 from evaluation.metrics import EvaluationAccumulator, build_summary_markdown, safe_divide
 from evaluation.contracts import normalize_annotation
-from evaluation.repositories import InMemoryOrderRepository
+from infrastructure.repositories.memory import InMemoryOrderRepository
 from interfaces.http.serializers import to_jsonable
 
 
@@ -301,18 +301,15 @@ def create_evaluation_orchestrator(
     faiss_manager: Optional[Any] = None,
     evaluation_as_of: Optional[str] = None,
 ) -> OrderProcessingOrchestrator:
-    from application.agents import MatchingAgent
-
     config = Config()
     if evaluation_as_of:
         # 重放时固定评测时点，保证交期等日期判断可复现
         config.risk.evaluation_as_of = evaluation_as_of
     order_manager = OrderManager(repository=InMemoryOrderRepository(), config=config)
-    matching_agent = MatchingAgent(config=config, faiss_manager=faiss_manager)
     return OrderProcessingOrchestrator(
         order_manager=order_manager,
         config=config,
-        matching_agent=matching_agent,
+        faiss_manager=faiss_manager,
     )
 
 
