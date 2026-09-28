@@ -6,9 +6,21 @@ from typing import Any, Callable, Dict, List, Optional, Set, Type, TypeVar
 
 from config import Config
 from domain.exceptions import InvalidOrderStatusException
+from domain.messages import AgentMessage
 from domain.models import FinalOrderResult, MatchedOrder, OrderStatus, ParsedOrder, RiskCheckResult
 from domain.order_state_machine import validate_transition
-from infrastructure.repositories import OrderRepository, PostgresOrderRepository
+from infrastructure.repositories import (
+    BlackboardRepository,
+    MessageRepository,
+    OrderRepository,
+    PostgresOrderRepository,
+    TaskRepository,
+)
+from infrastructure.repositories.memory import (
+    InMemoryBlackboardRepository,
+    InMemoryMessageRepository,
+    InMemoryTaskRepository,
+)
 
 ModelT = TypeVar("ModelT")
 
@@ -147,10 +159,17 @@ class OrderManager:
         self,
         repository: Optional[OrderRepository] = None,
         config: Optional[Config] = None,
+        blackboard_repository: Optional[BlackboardRepository] = None,
+        task_repository: Optional[TaskRepository] = None,
+        message_repository: Optional[MessageRepository] = None,
     ):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config = config or Config()
         self.repository = repository or PostgresOrderRepository(self.config.database.url)
+        # 协作状态（黑板/任务/消息）默认落在内存适配器；容器在部署时注入 PostgreSQL 实现。
+        self.blackboard_repository = blackboard_repository or InMemoryBlackboardRepository()
+        self.task_repository = task_repository or InMemoryTaskRepository()
+        self.message_repository = message_repository or InMemoryMessageRepository()
         if self.config.data.order_auto_archive_days > 0:
             self.archive_terminal_orders(self.config.data.order_auto_archive_days)
 
@@ -256,6 +275,62 @@ class OrderManager:
 
     def record_stage(self, order_id: str, stage: str, diagnostics: Dict[str, Any]) -> bool:
         return self._update(order_id, lambda context: context.processing_diagnostics.update({stage: diagnostics}))
+
+    def record_verdict(
+        self,
+        order_id: str,
+        parsed_order: ParsedOrder,
+        matched_order: MatchedOrder,
+        risk_result: RiskCheckResult,
+    ) -> bool:
+        """把 Adjudicator 晋升的 Layer 1 事实落库（仅 RISK_CHECKING 阶段允许）。
+
+        设计文档 §2.5：Layer 1 由 Adjudicator 裁决后经 Supervisor 落库，其他角色
+        只能写主张与证据。因此这里用 CAS 与阶段前置条件共同保证「事实不可被生产者改写」。
+        """
+        def mutate(context: OrderProcessingContext) -> None:
+            context.parsed_order = parsed_order
+            context.matched_order = matched_order
+            context.risk_result = risk_result
+        return self._update(order_id, mutate, OrderStatus.RISK_CHECKING)
+
+    # ------------------------------------------------------------ 协作状态持久化
+    def save_blackboard(self, order_id: str, snapshot: Dict[str, Any]) -> bool:
+        return self.blackboard_repository.save(order_id, snapshot)
+
+    def load_blackboard(self, order_id: str) -> Optional[Dict[str, Any]]:
+        return self.blackboard_repository.load(order_id)
+
+    def save_tasks(self, order_id: str, snapshot: Dict[str, Any]) -> bool:
+        return self.task_repository.save(order_id, snapshot)
+
+    def load_tasks(self, order_id: str) -> Optional[Dict[str, Any]]:
+        return self.task_repository.load(order_id)
+
+    def get_tasks(self, order_id: str) -> List[Dict[str, Any]]:
+        snapshot = self.task_repository.load(order_id) or {}
+        return list((snapshot.get("tasks") or {}).values())
+
+    def record_messages(self, order_id: str, messages: List[AgentMessage]) -> int:
+        return self.message_repository.append(order_id, messages)
+
+    def list_messages(self, order_id: str) -> List[Dict[str, Any]]:
+        return self.message_repository.list_for_order(order_id)
+
+    def get_trace(self, order_id: str) -> Dict[str, Any]:
+        """协作轨迹：消息链 + 裁决理由链 + 争议。"""
+        blackboard = self.blackboard_repository.load(order_id) or {}
+        return {
+            "order_id": order_id,
+            "messages": self.message_repository.list_for_order(order_id),
+            "claims": blackboard.get("claims") or [],
+            "disputes": blackboard.get("disputes") or [],
+            "verdicts": blackboard.get("verdicts") or [],
+        }
+
+    def recover_orphan_tasks(self, ttl_seconds: int = 180) -> List[str]:
+        """进程重启后回收租约过期的任务，避免任务永久卡在 RUNNING。"""
+        return self.task_repository.recover_expired()
 
     def finalize_order(
         self, order_id: str, final_result: FinalOrderResult,
