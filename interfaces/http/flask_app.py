@@ -108,6 +108,22 @@ def create_app(
 
         return jsonify({"success": True, "data": to_jsonable(order)})
 
+    @app.route("/api/orders/<order_id>/trace", methods=["GET"])
+    def get_order_trace(order_id: str):
+        """协作轨迹：谁在什么时候对谁说了什么、依据是什么（设计文档 §2.3、§5）。"""
+        order = container.orchestrator.get_order_detail(order_id)
+        if not order:
+            return jsonify({"success": False, "message": "Order not found"}), 404
+        return jsonify({"success": True, "data": to_jsonable(container.orchestrator.get_trace(order_id))})
+
+    @app.route("/api/orders/<order_id>/tasks", methods=["GET"])
+    def get_order_tasks(order_id: str):
+        """任务 DAG 状态：按 item/region 扇出的任务与租约（设计文档 §2.4）。"""
+        order = container.orchestrator.get_order_detail(order_id)
+        if not order:
+            return jsonify({"success": False, "message": "Order not found"}), 404
+        return jsonify({"success": True, "data": to_jsonable(container.orchestrator.get_tasks(order_id))})
+
     @app.route("/api/orders/<order_id>/review-suggestion", methods=["POST"])
     def generate_review_suggestion(order_id: str):
         result = container.orchestrator.generate_review_suggestion(order_id)

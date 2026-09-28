@@ -1,6 +1,6 @@
-from application.pipeline.stages import AgentPipelineStage, StageExecutionResult
+from application.pipeline.stages import NodeExecutionResult, TaskNodeExecutor
 
 __all__ = [
-    "AgentPipelineStage",
-    "StageExecutionResult",
+    "NodeExecutionResult",
+    "TaskNodeExecutor",
 ]
