@@ -31,6 +31,30 @@ class FakeOrchestrator:
             return None
         return {"order_id": order_id, "status": "completed", "transition_history": []}
 
+    def get_trace(self, order_id):
+        return {
+            "order_id": order_id,
+            "messages": [
+                {
+                    "message_id": "m-1",
+                    "sender": "supervisor",
+                    "recipient": None,
+                    "performative": "escalate",
+                    "subject": {"claim_subject": "order.action"},
+                    "payload": {"action": "manual_review"},
+                }
+            ],
+            "claims": [],
+            "disputes": [],
+            "verdicts": [{"verdict": "manual_review"}],
+        }
+
+    def get_tasks(self, order_id):
+        return [
+            {"task_id": "t-1", "agent": "extractor", "stage": "extract", "status": "done"},
+            {"task_id": "t-2", "agent": "review_assistant", "stage": "assist", "status": "done"},
+        ]
+
     def process_order_from_document(self, file_path):
         self.document_requests.append(file_path)
         return {"success": True, "order_id": "order-1", "message": "订单处理完成"}
@@ -191,6 +215,74 @@ class HttpApiTests(unittest.TestCase):
         response = self.client.post("/api/orders/missing/review-suggestion")
 
         self.assertEqual(response.status_code, 404)
+
+    # ------------------------------------------------------ /trace 与 /tasks
+    def test_order_trace_exposes_collaboration_messages(self):
+        response = self.client.get("/api/orders/order-1/trace")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["success"])
+        data = response.json["data"]
+        self.assertEqual(data["order_id"], "order-1")
+        self.assertEqual(data["messages"][0]["performative"], "escalate")
+        self.assertEqual(data["verdicts"], [{"verdict": "manual_review"}])
+
+    def test_unknown_order_trace_is_not_found(self):
+        response = self.client.get("/api/orders/missing/trace")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(response.json["success"])
+
+    def test_order_tasks_expose_dag_state(self):
+        response = self.client.get("/api/orders/order-1/tasks")
+
+        self.assertEqual(response.status_code, 200)
+        stages = [(task["agent"], task["stage"], task["status"]) for task in response.json["data"]]
+        self.assertEqual(
+            stages,
+            [("extractor", "extract", "done"), ("review_assistant", "assist", "done")],
+        )
+
+    def test_unknown_order_tasks_are_not_found(self):
+        response = self.client.get("/api/orders/missing/tasks")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(response.json["success"])
+
+    # ------------------------------------------------------------- /confirm
+    def test_confirm_delegates_action_to_orchestrator(self):
+        response = self.client.post("/api/confirm/order-1", json={"action": "confirm"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["success"])
+        self.assertEqual(response.json["data"]["order_id"], "order-1")
+        self.assertEqual(response.json["data"]["message"], "confirm")
+
+    def test_confirm_rejects_an_unknown_action(self):
+        response = self.client.post("/api/confirm/order-1", json={"action": "maybe"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json["success"])
+        self.assertIn("confirm or reject", response.json["message"])
+
+    def test_confirm_rejects_a_missing_action(self):
+        response = self.client.post("/api/confirm/order-1", json={})
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_confirm_rejects_a_non_string_comment(self):
+        response = self.client.post(
+            "/api/confirm/order-1", json={"action": "confirm", "comment": 5}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("comment must be a string", response.json["message"])
+
+    def test_confirm_failure_from_orchestrator_is_bad_request(self):
+        response = self.client.post("/api/confirm/other-order", json={"action": "reject"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json["success"])
 
 
 if __name__ == "__main__":
