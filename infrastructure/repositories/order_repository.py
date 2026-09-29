@@ -1,3 +1,4 @@
+import uuid
 from typing import Any, Dict, Optional
 
 import psycopg
@@ -8,6 +9,20 @@ from application.ports.repositories import CollaborationRepositories, OrderRepos
 from infrastructure.repositories.blackboard_repository import PostgresBlackboardRepository
 from infrastructure.repositories.message_repository import PostgresMessageRepository
 from infrastructure.repositories.task_repository import PostgresTaskRepository
+
+
+def _is_order_id(value: Any) -> bool:
+    """订单号在库中是 UUID 列。
+
+    外部传入的订单号（URL 路径、集成方调用）不保证是 UUID。若直接拼进
+    `WHERE order_id = %s`，Postgres 会抛 InvalidTextRepresentation 并冒泡成 500。
+    这种输入不可能命中任何记录，因此在边界上直接判定「查无此单」。
+    """
+    try:
+        uuid.UUID(str(value))
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return True
 
 
 class PostgresOrderRepository(OrderRepository):
@@ -55,6 +70,8 @@ class PostgresOrderRepository(OrderRepository):
             return {row["order_id"]: row["snapshot"] for row in cursor.fetchall()}
 
     def get(self, order_id: str) -> Optional[Dict[str, Any]]:
+        if not _is_order_id(order_id):
+            return None
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute("SELECT snapshot FROM orders WHERE order_id = %s", (order_id,))
             row = cursor.fetchone()
@@ -82,6 +99,8 @@ class PostgresOrderRepository(OrderRepository):
             return cursor.rowcount == 1
 
     def delete(self, order_id: str, expected_updated_at: str) -> bool:
+        if not _is_order_id(order_id):
+            return False
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 "DELETE FROM orders WHERE order_id = %s AND snapshot->>'updated_at' = %s",
@@ -108,6 +127,8 @@ class PostgresOrderRepository(OrderRepository):
         }
 
     def archive(self, order_id: str, expected_updated_at: str) -> bool:
+        if not _is_order_id(order_id):
+            return False
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 """WITH moved AS (

@@ -64,6 +64,20 @@ class StorageContract:
         self.assertFalse(self.repository.archive(order_id, old["updated_at"]))
         self.assertEqual(first.get_order(order_id).status, OrderStatus.PARSING)
 
+    def test_malformed_order_id_is_treated_as_not_found(self):
+        # 外部传入的订单号不保证是 UUID（URL 路径、集成方调用）。非法格式必须按
+        # 「查无此单」处理，而不是把数据库的类型错误冒泡成 500。
+        manager = self.manager()
+        valid = manager.create_order(order_text="valid")
+        for malformed in ("not-a-uuid", "", "12345", "  ", None):
+            with self.subTest(malformed=malformed):
+                self.assertIsNone(self.repository.get(malformed))
+                self.assertFalse(self.repository.delete(malformed, "ignored"))
+                self.assertFalse(self.repository.archive(malformed, "ignored"))
+                self.assertIsNone(manager.get_order(malformed))
+        # 合法订单号不受影响
+        self.assertIsNotNone(self.repository.get(valid))
+
     def test_restart_expires_only_stale_inflight_orders(self):
         manager = self.manager()
         stale = manager.create_order()
