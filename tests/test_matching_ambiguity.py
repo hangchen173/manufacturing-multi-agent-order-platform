@@ -2,7 +2,7 @@ import unittest
 
 from application.agents import PolicyRisk
 from config import Config
-from domain.models import MatchedOrder, MatchedOrderItem
+from domain.models import BusinessAction, MatchedOrder, MatchedOrderItem
 from tests.support import FakeFAISSManager, build_harness, item, order_payload
 
 # 同名（屏蔽控制电缆）异规格：归一化后规格主字段一致，仅屏蔽类型限定词不同，
@@ -31,6 +31,17 @@ ELC_025 = {
 }
 
 CATALOG = [CBL_003, CBL_043, ELC_001, ELC_025]
+
+# 含规格的登记别名：用户习惯按别名整串书写，抽取后规格字段为空。
+# 别名整串本身已唯一确定 SKU，不得因「规格字段为空」而拒识。
+SPEC_BEARING_CATALOG = [
+    {"sku_code": "FST-4", "material_name": "不锈钢内六角圆柱头螺钉",
+     "specification": "304 M8×12", "unit": "个", "reference_price": 0.33,
+     "category": "紧固件", "aliases": ["304内六角螺丝 M8*12"]},
+    {"sku_code": "FST-10", "material_name": "不锈钢内六角圆柱头螺钉",
+     "specification": "304 M10×16", "unit": "个", "reference_price": 0.63,
+     "category": "紧固件", "aliases": ["304内六角螺丝 M10*16"]},
+]
 
 
 def _match(catalog, name, spec, *, search_results=None, quantity=100, unit="米", price=1.0):
@@ -120,6 +131,128 @@ class RegisteredAliasTests(unittest.TestCase):
         matched = _match(duplicate_catalog, "屏蔽控制电缆", "RVVP 4×0.5mm² 普通屏蔽")
 
         self.assertIsNone(matched.sku_code)
+
+    def test_spec_bearing_alias_written_verbatim_resolves_without_separate_spec(self):
+        # 用户把含规格的登记别名整串写进物料名称、规格字段为空：
+        # 别名整串已唯一确定 SKU，不得因「规格为空」降级为人工审核
+        matched = _match(SPEC_BEARING_CATALOG, "304内六角螺丝 M8*12", None, quantity=10, unit="个")
+
+        self.assertEqual(matched.sku_code, "FST-4")
+        self.assertEqual(matched.match_basis, "catalog_alias_exact")
+
+    def test_alias_exact_match_records_explainable_name_normalization(self):
+        # 别名整串命中后，改写为标准名的动作必须可解释，而不是静默替换
+        harness = build_harness(
+            payloads=[order_payload([item("304内六角螺丝 M8*12", None, 10, "个", 0.33)])],
+            catalog=SPEC_BEARING_CATALOG,
+        )
+        result = harness.orchestrator.process_order_from_text("1 304内六角螺丝 M8*12 10 个 0.33")
+        decision = result["business_decision"]
+
+        self.assertEqual(decision.action, BusinessAction.AUTO_CORRECT)
+        self.assertEqual(len(decision.normalizations), 1)
+        change = decision.normalizations[0]
+        self.assertEqual(change.field, "material_name")
+        self.assertEqual(change.original_value, "304内六角螺丝 M8*12")
+        self.assertEqual(change.standard_value, "不锈钢内六角圆柱头螺钉")
+        self.assertEqual(change.basis, "物料名称整串命中标准库已登记别名（别名内含规格）")
+
+    def test_alias_shared_by_multiple_skus_is_still_ambiguous_without_spec(self):
+        # 别名本身有歧义（ELC-001/ELC-025 共享 "CJX2 9A 220V"）时不得任选其一
+        matched = _match(CATALOG, "CJX2 9A 220V", None, quantity=10, unit="个")
+
+        self.assertIsNone(matched.sku_code)
+
+    def test_alias_split_across_name_and_spec_still_resolves(self):
+        # 同一输入的另一种抽取形态：规格被拆进规格字段。名称与规格拼合后
+        # 仍等于同一条别名，必须同样命中，否则结果取决于模型如何切分
+        matched = _match(SPEC_BEARING_CATALOG, "304内六角螺丝", "M8*12", quantity=10, unit="个")
+
+        self.assertEqual(matched.sku_code, "FST-4")
+        self.assertEqual(matched.match_basis, "catalog_alias_joined_exact")
+
+    def test_alias_split_still_distinguishes_sibling_specs(self):
+        # 拼合命中不得抹平同族不同规格：M10*16 必须落到另一个 SKU
+        matched = _match(SPEC_BEARING_CATALOG, "304内六角螺丝", "M10*16", quantity=10, unit="个")
+
+        self.assertEqual(matched.sku_code, "FST-10")
+        self.assertEqual(matched.match_basis, "catalog_alias_joined_exact")
+
+    def test_split_alias_form_is_auto_corrected_end_to_end(self):
+        # 拆开书写（名称 + 规格两字段）也必须走确定性归一化，而不是人工审核
+        harness = build_harness(
+            payloads=[order_payload([item("304内六角螺丝", "M8*12", 10, "个", 0.33)])],
+            catalog=SPEC_BEARING_CATALOG,
+        )
+        result = harness.orchestrator.process_order_from_text("1 304内六角螺丝 M8*12 10 个 0.33")
+        decision = result["business_decision"]
+        risk = result["final_result"].risk_result
+
+        self.assertFalse(risk.needs_confirmation)
+        self.assertEqual(decision.action, BusinessAction.AUTO_CORRECT)
+        self.assertEqual(
+            sorted(change.field for change in decision.normalizations),
+            ["material_name", "specification"],
+        )
+        self.assertNotIn(
+            "ambiguous_missing_specification",
+            [issue.issue_type for issue in risk.issues],
+        )
+
+    def test_split_alias_with_a_wrong_spec_fragment_is_rejected(self):
+        # 拼合键必须整体命中别名：规格片段不成立时不得凭名称前缀接受
+        matched = _match(SPEC_BEARING_CATALOG, "304内六角螺丝", "M9*99", quantity=10, unit="个")
+
+        self.assertIsNone(matched.sku_code)
+
+    def test_canonical_name_without_spec_is_not_accepted_by_alias_index(self):
+        # 别名索引只认 aliases 列；标准名不含规格，缺规格时仍须拒识
+        matched = _match(CATALOG, "屏蔽控制电缆", None, quantity=100, unit="米")
+
+        self.assertIsNone(matched.sku_code)
+
+    def test_alias_verbatim_does_not_override_a_conflicting_spec(self):
+        # 已给出规格且与目录冲突时，别名整串不得覆盖规格硬冲突
+        matched = _match(
+            SPEC_BEARING_CATALOG, "304内六角螺丝 M8*12", "304 M10×16", quantity=10, unit="个",
+        )
+
+        self.assertIsNone(matched.sku_code)
+
+    def test_spec_bearing_alias_does_not_raise_missing_specification_risk(self):
+        # 规格内嵌在别名整串里、抽取规格为空时，标准库行才是规格的权威来源：
+        # 物料已被唯一确定，不得再以「规格缺失」判为高风险转人工
+        harness = build_harness(
+            payloads=[order_payload([item("304内六角螺丝 M8*12", None, 10, "个", 0.33)])],
+            catalog=SPEC_BEARING_CATALOG,
+        )
+        result = harness.orchestrator.process_order_from_text("1 304内六角螺丝 M8*12 10 个 0.33")
+        risk = result["final_result"].risk_result
+
+        self.assertFalse(risk.needs_confirmation)
+        self.assertNotIn(
+            "ambiguous_missing_specification",
+            [issue.issue_type for issue in risk.issues],
+        )
+        # 抽取规格仍为空：不补造原文字段，只在 matched_specification 记录标准规格
+        matched_item = result["final_result"].matched_order.items[0]
+        self.assertIsNone(matched_item.specification)
+        self.assertEqual(matched_item.matched_specification, "304 M8×12")
+
+    def test_missing_specification_still_escalates_without_a_catalog_spec(self):
+        # 未命中任何 SKU 时不适用豁免：缺规格仍须送审
+        harness = build_harness(
+            payloads=[order_payload([item("304内六角螺丝 M9*99", None, 10, "个", 0.33)])],
+            catalog=SPEC_BEARING_CATALOG,
+        )
+        result = harness.orchestrator.process_order_from_text("1 304内六角螺丝 M9*99 10 个 0.33")
+        risk = result["final_result"].risk_result
+
+        self.assertTrue(risk.needs_confirmation)
+        self.assertIn(
+            "ambiguous_missing_specification",
+            [issue.issue_type for issue in risk.issues],
+        )
 
 
 class NameConflictTests(unittest.TestCase):

@@ -39,6 +39,7 @@ class CatalogIndex:
         self._spec_index: Dict[str, List[Dict[str, Any]]] = {}
         self._name_spec_index: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
         self._row_name_keys: Dict[str, Set[str]] = {}
+        self._alias_index: Dict[str, List[str]] = {}
         self._by_sku: Dict[str, Dict[str, Any]] = {}
         self._build()
 
@@ -46,14 +47,17 @@ class CatalogIndex:
         for row in self.metadata:
             name_key = normalize_match_key(row.get("material_name"))
             spec_key = normalize_match_key(row.get("specification"))
+            sku_code = row.get("sku_code")
             row_keys: Set[str] = set()
             if name_key:
                 row_keys.add(name_key)
             for alias in row.get("aliases") or []:
                 alias_key = normalize_match_key(alias)
-                if alias_key:
-                    row_keys.add(alias_key)
-            sku_code = row.get("sku_code")
+                if not alias_key:
+                    continue
+                row_keys.add(alias_key)
+                if sku_code:
+                    self._alias_index.setdefault(alias_key, []).append(sku_code)
             if sku_code:
                 self._row_name_keys.setdefault(sku_code, set()).update(row_keys)
                 self._by_sku[sku_code] = row
@@ -82,6 +86,22 @@ class CatalogIndex:
             row["sku_code"] for row in self.compatible_rows(spec_key, name_key)
             if row.get("sku_code")
         ))
+
+    def alias_exact_skus(self, alias_key: str) -> List[str]:
+        """整串别名精确命中：用户按已登记别名书写物料。
+
+        标准库里的别名常常把规格内嵌在整串中（如 FST-004 的
+        `304内六角螺丝 M8*12`）。这类别名走不了 `compatible_skus`：名称与规格
+        都被切成了别名的一段。因此调用方应把「物料名称 + 规格」拼成一个键传进来
+        （规格为空时即名称本身），使别名在整串、半拆、拆开三种书写下都能命中。
+
+        只认 `aliases` 列，**不认标准名本身**——标准名不含规格，缺规格时不得凭
+        名称接受（如"不锈钢内六角圆柱头螺钉"对应多个 SKU）。
+        返回多个 SKU 表示别名本身有歧义，调用方必须拒绝。
+        """
+        if not alias_key:
+            return []
+        return list(dict.fromkeys(self._alias_index.get(alias_key) or []))
 
     def spec_rows(self, spec_key: str) -> List[Dict[str, Any]]:
         return list(self._spec_index.get(spec_key, []))

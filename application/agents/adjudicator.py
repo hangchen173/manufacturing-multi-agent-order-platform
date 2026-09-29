@@ -31,6 +31,8 @@ from domain.tasks import Task
 ORDER_LEVEL_ITEM_INDEX = -1
 
 _NAME_BASIS = {
+    "catalog_alias_exact": "物料名称整串命中标准库已登记别名（别名内含规格）",
+    "catalog_alias_joined_exact": "物料名称与规格拼合命中标准库已登记别名（别名内含规格）",
     "catalog_alias_spec_exact": "物料名称命中标准库已登记别名",
     "catalog_name_spec_exact": "物料名称为标准名的等价书写",
     "vector_spec_exact": "物料名称与标准库名称兼容且规格一致",

@@ -121,11 +121,24 @@ class PolicyRisk(CollaborativeAgent):
     def check_ambiguous_specification(self, item: Dict[str, Any], item_index: int) -> List[Dict[str, Any]]:
         if (item.get("specification") or "").strip():
             return []
+        if self._spec_known_from_catalog(item):
+            # 规格并非「缺失」：标准库该 SKU 自身登记了规格，物料已被唯一确定。
+            # 能走到这里的唯一路径是「物料名称整串命中已登记别名、规格内嵌在别名里」，
+            # 因为向量路径在规格为空时一律 REFUSE（见 Disambiguator.decide）。
+            # 此时判「无法唯一定位标准物料」是误报，且会阻断本可自动修正的订单。
+            return []
         return [self._issue(
             item_index, IssueType.AMBIGUOUS_MISSING_SPECIFICATION,
             f"物料 '{item.get('material_name')}' 缺少规格型号，无法唯一定位标准物料",
             SeverityLevel.HIGH,
         )]
+
+    @staticmethod
+    def _spec_known_from_catalog(item: Dict[str, Any]) -> bool:
+        """标准库已为该 SKU 登记规格：规格的权威来源是标准库行，而非抽取文本。"""
+        return bool(item.get("sku_code")) and bool(
+            (item.get("matched_specification") or "").strip()
+        )
 
     def check_grounding_evidence(self, item: Dict[str, Any], item_index: int) -> List[Dict[str, Any]]:
         """证据通过率替代模型自报置信度：溯源不过关的行必须送审。"""

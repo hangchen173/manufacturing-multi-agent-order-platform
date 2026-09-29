@@ -58,6 +58,32 @@ class FieldMissingPolicyTests(unittest.TestCase):
         self.assertEqual(_issue_types(issues), ["ambiguous_missing_specification"])
         self.assertEqual(issues[0]["severity"], "high")
 
+    def test_specification_missing_is_not_flagged_when_the_catalog_row_supplies_it(self):
+        # 别名整串命中时规格内嵌在别名里，标准库该 SKU 自身登记了规格：
+        # 物料已被唯一确定，报「无法唯一定位」是误报
+        item_row = _item(specification=None, matched_specification="304 M8×12",
+                         match_basis="catalog_alias_exact")
+
+        self.assertEqual(_policy().check_ambiguous_specification(item_row.model_dump(), 0), [])
+
+    def test_catalog_specification_does_not_excuse_an_unaccepted_item(self):
+        # 未接受任何 SKU 时，残留的标准规格不得豁免缺规格送审
+        item_row = _item(specification=None, matched_specification="304 M8×12", sku_code=None)
+
+        issues = _policy().check_ambiguous_specification(item_row.model_dump(), 0)
+
+        self.assertEqual(_issue_types(issues), ["ambiguous_missing_specification"])
+        self.assertEqual(issues[0]["severity"], "high")
+
+    def test_blank_catalog_specification_does_not_excuse_a_missing_spec(self):
+        # 标准库该 SKU 也没有规格时，缺规格依然无法唯一定位，须送审
+        item_row = _item(specification=None, matched_specification="   ",
+                         match_basis="catalog_alias_exact")
+
+        issues = _policy().check_ambiguous_specification(item_row.model_dump(), 0)
+
+        self.assertEqual(_issue_types(issues), ["ambiguous_missing_specification"])
+
     def test_quantity_missing_escalates(self):
         agent = _policy()
 
