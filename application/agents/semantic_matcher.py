@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from application.agents.base_agent import CollaborativeAgent
 from application.agents.match_keys import CatalogIndex, normalize_match_key
+from application.ports.vector_store import VectorStore
 from domain.agent_roles import AgentRole
 from domain.messages import AgentMessage, Evidence, Performative
 from domain.tasks import Task
@@ -19,20 +20,13 @@ TOP_K = 3
 class SemanticMatcher(CollaborativeAgent):
     role = AgentRole.SEMANTIC_MATCHER
 
-    def __init__(self, faiss_manager: Any = None, blackboard: Any = None, budget: Any = None,
-                 config: Any = None):
+    def __init__(self, faiss_manager: Optional[VectorStore] = None, blackboard: Any = None,
+                 budget: Any = None, config: Any = None):
         super().__init__(blackboard, budget, config)
-        self._faiss_manager = faiss_manager
+        # 由组合根注入；None 表示无向量召回能力，调用处已按「无候选」降级处理。
+        self.faiss_manager = faiss_manager
         self._index: Optional[CatalogIndex] = None
         self._index_key: Optional[int] = None
-
-    @property
-    def faiss_manager(self):
-        if self._faiss_manager is None and self.config is not None:
-            from infrastructure.vector_store.faiss_manager import FAISSManager
-
-            self._faiss_manager = FAISSManager(index_path=self.config.data.faiss_index_path)
-        return self._faiss_manager
 
     def catalog_index(self, metadata: List[Dict[str, Any]]) -> CatalogIndex:
         if self._index is None or self._index_key != id(metadata):

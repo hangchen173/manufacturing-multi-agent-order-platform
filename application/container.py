@@ -26,6 +26,7 @@ class ApplicationContainer:
 
             from application.orchestrators import OrderProcessingOrchestrator
             from application.services import OrderManager
+            from infrastructure.document_processing import DocumentLoader
             from infrastructure.repositories import PostgresOrderRepository
             from infrastructure.vector_store import FAISSManager
             from infrastructure.vector_store.catalog import (
@@ -47,6 +48,7 @@ class ApplicationContainer:
             )
             orchestrator = OrderProcessingOrchestrator(
                 order_manager=order_manager,
+                document_loader=DocumentLoader(),
                 config=self.config,
                 faiss_manager=store,
             )

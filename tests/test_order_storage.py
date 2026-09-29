@@ -14,6 +14,7 @@ from application.orchestrators import OrderProcessingOrchestrator
 from application.services import OrderManager
 from config import Config
 from domain.models import FinalOrderResult, OrderStatus, ParsedOrder
+from infrastructure.document_processing import DocumentLoader
 from infrastructure.repositories import PostgresOrderRepository
 from tests.fakes import InMemoryOrderRepository
 
@@ -34,7 +35,9 @@ class StorageContract:
 
     def orchestrator(self, manager):
         # 仅用于 confirm/reject 的并发 CAS 验证，不触发任何 Agent 业务链路。
-        return OrderProcessingOrchestrator(order_manager=manager, config=manager.config)
+        return OrderProcessingOrchestrator(
+            order_manager=manager, document_loader=DocumentLoader(), config=manager.config,
+        )
 
     def test_independent_managers_do_not_lose_orders_or_updates(self):
         first, second = self.manager(), self.manager(self.second_repository)

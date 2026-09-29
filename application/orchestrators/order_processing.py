@@ -29,6 +29,8 @@ from application.agents import (
     StructureScout,
     Supervisor,
 )
+from application.ports.document_loader import DocumentLoaderPort
+from application.ports.vector_store import VectorStore
 from application.services import OrderManager
 from config import Config
 from domain.agent_roles import AgentRole
@@ -41,23 +43,22 @@ from domain.models import (
     ParsedOrder,
     RiskCheckResult,
 )
-from infrastructure.document_processing import DocumentLoader
 
 
 class OrderProcessingOrchestrator:
     def __init__(
         self,
         order_manager: OrderManager,
+        document_loader: DocumentLoaderPort,
         config: Optional[Config] = None,
-        document_loader: Optional[DocumentLoader] = None,
         supervisor: Optional[Supervisor] = None,
-        faiss_manager: Optional[Any] = None,
+        faiss_manager: Optional[VectorStore] = None,
         agents: Optional[Dict[AgentRole, Any]] = None,
         reference_date: Optional[str] = None,
     ):
         self.config = config or Config()
         self.order_manager = order_manager
-        self.document_loader = document_loader or DocumentLoader()
+        self.document_loader = document_loader
         self.faiss_manager = faiss_manager
         self._last_usage: Dict[str, int] = self._empty_usage()
         self._last_diagnostics: Dict[str, Any] = {}

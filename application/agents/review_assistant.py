@@ -11,6 +11,7 @@ import json
 from typing import Any, Dict, List, Optional, Tuple
 
 from application.agents.base_agent import CollaborativeAgent
+from application.ports.vector_store import VectorStore
 from application.protocol.model_output import assert_not_truncated
 from domain.agent_roles import AgentRole
 from domain.messages import AgentMessage, Evidence, Performative
@@ -58,19 +59,12 @@ _USER_TEMPLATE = """订单信息：
 class ReviewAssistant(CollaborativeAgent):
     role = AgentRole.REVIEW_ASSISTANT
 
-    def __init__(self, llm: Any = None, faiss_manager: Any = None, blackboard: Any = None,
-                 budget: Any = None, config: Any = None):
+    def __init__(self, llm: Any = None, faiss_manager: Optional[VectorStore] = None,
+                 blackboard: Any = None, budget: Any = None, config: Any = None):
         super().__init__(blackboard, budget, config)
         self.llm = llm
-        self._faiss_manager = faiss_manager
-
-    @property
-    def faiss_manager(self):
-        if self._faiss_manager is None and self.config is not None:
-            from infrastructure.vector_store.faiss_manager import FAISSManager
-
-            self._faiss_manager = FAISSManager(index_path=self.config.data.faiss_index_path)
-        return self._faiss_manager
+        # 由组合根注入；None 表示无向量召回能力，检索处已降级为「只用已接受 SKU」。
+        self.faiss_manager = faiss_manager
 
     def _get_llm(self):
         if self.llm is None:

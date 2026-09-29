@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from application.orchestrators import OrderProcessingOrchestrator  # noqa: E402
 from application.services import OrderManager  # noqa: E402
 from config import Config, ModelConfig  # noqa: E402
+from infrastructure.document_processing import DocumentLoader  # noqa: E402
 from infrastructure.repositories.memory import InMemoryOrderRepository  # noqa: E402
 
 
@@ -70,7 +71,8 @@ def run_provider(name: str, spec: dict) -> bool:
 
     manager = OrderManager(repository=InMemoryOrderRepository(), config=config)
     orchestrator = OrderProcessingOrchestrator(
-        order_manager=manager, config=config, faiss_manager=StubVectorStore(CATALOG),
+        order_manager=manager, document_loader=DocumentLoader(), config=config,
+        faiss_manager=StubVectorStore(CATALOG),
     )
 
     print(f"\n=== {name} / {spec['model']} ===")
@@ -129,7 +131,8 @@ def run_two_model_pipeline() -> bool:
 
     manager = OrderManager(repository=InMemoryOrderRepository(), config=config)
     orchestrator = OrderProcessingOrchestrator(
-        order_manager=manager, config=config, faiss_manager=StubVectorStore(CATALOG),
+        order_manager=manager, document_loader=DocumentLoader(), config=config,
+        faiss_manager=StubVectorStore(CATALOG),
     )
 
     print("\n=== 多模型协作：同一订单、两个角色、两家模型 ===")

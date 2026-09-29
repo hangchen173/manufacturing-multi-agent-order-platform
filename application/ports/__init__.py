@@ -10,3 +10,22 @@ infrastructure，依赖倒置只做了一半。
 import 任何 infrastructure 模块，即可保证「四个仓储同源」——订单落 Postgres 而
 协作状态落内存会造成重启后订单卡在中间态且不报错（见 P0-1）。
 """
+from application.ports.document_loader import DocumentLoaderPort
+from application.ports.repositories import (
+    BlackboardRepository,
+    CollaborationRepositories,
+    MessageRepository,
+    OrderRepository,
+    TaskRepository,
+)
+from application.ports.vector_store import VectorStore
+
+__all__ = [
+    "BlackboardRepository",
+    "CollaborationRepositories",
+    "DocumentLoaderPort",
+    "MessageRepository",
+    "OrderRepository",
+    "TaskRepository",
+    "VectorStore",
+]

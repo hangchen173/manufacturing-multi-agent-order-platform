@@ -27,6 +27,7 @@ from application.orchestrators import OrderProcessingOrchestrator
 from application.services import OrderManager
 from config import Config
 from domain.agent_roles import AgentRole
+from infrastructure.document_processing import DocumentLoader
 from infrastructure.repositories.memory import InMemoryOrderRepository
 
 DEFAULT_REFERENCE_DATE = "2026-05-10"
@@ -147,7 +148,8 @@ def build_harness(
         reference_date=reference_date, rng_seed=rng_seed,
     )
     orchestrator = OrderProcessingOrchestrator(
-        order_manager=manager, config=config, faiss_manager=faiss_manager,
+        order_manager=manager, document_loader=DocumentLoader(),
+        config=config, faiss_manager=faiss_manager,
         supervisor=supervisor, agents=agents,
     )
     return SupervisorHarness(

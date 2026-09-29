@@ -31,6 +31,7 @@ from domain.constants import (
 )
 from evaluation.metrics import EvaluationAccumulator, build_summary_markdown, safe_divide
 from evaluation.contracts import normalize_annotation
+from infrastructure.document_processing import DocumentLoader
 from infrastructure.repositories.memory import InMemoryOrderRepository
 from interfaces.http.serializers import to_jsonable
 
@@ -308,6 +309,7 @@ def create_evaluation_orchestrator(
     order_manager = OrderManager(repository=InMemoryOrderRepository(), config=config)
     return OrderProcessingOrchestrator(
         order_manager=order_manager,
+        document_loader=DocumentLoader(),
         config=config,
         faiss_manager=faiss_manager,
     )
