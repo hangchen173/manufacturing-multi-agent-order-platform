@@ -1,7 +1,7 @@
 # 从单 Agent 管道到 Multi-Agent 协作：架构分析与改造设计
 
 > 对象：`/Users/cmh/Documents/AGENT_project` 制造业订单解析系统
-> 前置阅读：`PROJECT_ANALYSIS.md`（现状问题清单）、`MANUFACTURING_ORDER_PLATFORM_GOALS.md`（项目自定目标）
+> 前置阅读：`PROJECT_HISTORY.md`（项目历史纪录：自定目标、里程碑、风险清单与缺陷修复）
 
 ---
 

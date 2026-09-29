@@ -6,9 +6,9 @@
 - `run_evaluation.py`: 批量评测入口，读取 `processed/` 目录并输出结果。
 - `replay_downstream.py`: 下游重放入口，固定旧 `ParsedOrder`，只重放当前 Matching/Risk/业务动作。
 - `templates/`: 标注模板、结果模板、manifest 示例。
-- `results/`: 后续放评测结果、截图、表格。
-- `manifests/`: 后续放真实采样清单或下载记录。
-- `notes/`: 后续放实验日志、异常案例分析。
+- `results/`: 评测与重放产物（`summary.json`、`predictions.jsonl`、`replay_summary.json` 等）。
+  其中的 `.md` 摘要是脚本生成的阅读版，可随时重跑生成，不入库。
+- `manifests/`: 真实采样清单或下载记录。
 
 ## 阶段一契约
 
