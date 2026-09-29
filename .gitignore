@@ -48,6 +48,8 @@ datasets/generated_complex
 datasets/public/
 output/
 .playwright-cli/
+# Agent 工作记忆（跨会话上下文），非项目交付物
+.workbuddy-ai/
 
 # Frozen regression fixtures must travel with their content hashes. Ignore the
 # contents of self_built and whitelist the fixture directories; ignoring the
