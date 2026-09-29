@@ -166,6 +166,42 @@ class HttpApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_invalid_order_text_is_rejected_before_any_order_is_created(self):
+        # 非法 order_text 必须在进入业务链路前被拦下：process_order_from_text 会先落
+        # 一条订单再跑流水线，放行就会留下一条注定失败、界面上又无法清理的订单。
+        invalid_payloads = [
+            {"order_text": 12345},
+            {"order_text": ["a"]},
+            {"order_text": "   "},
+            {"order_text": ""},
+            {"order_text": None},
+            {},
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                response = self.client.post("/api/upload_text", json=payload)
+                self.assertEqual(response.status_code, 400)
+                self.assertFalse(response.json["success"])
+        # 关键：业务链路从未被触达，因此不会有任何订单落库
+        self.assertEqual(self.orchestrator.text_requests, [])
+
+    def test_oversized_upload_returns_a_json_error(self):
+        # 框架级 4xx 也必须返回 JSON，否则 API 消费方无法统一解析
+        self.app.config["MAX_CONTENT_LENGTH"] = 1024
+        response = self.client.post(
+            "/api/upload",
+            data={"file": (BytesIO(b"x" * 8192), "order.txt")},
+        )
+
+        self.assertEqual(response.status_code, 413)
+        self.assertFalse(response.json["success"])
+
+    def test_disallowed_method_returns_a_json_error(self):
+        response = self.client.post("/api/orders")
+
+        self.assertEqual(response.status_code, 405)
+        self.assertFalse(response.json["success"])
+
     def test_document_upload_is_saved_outside_sample_documents(self):
         response = self.client.post(
             "/api/upload",

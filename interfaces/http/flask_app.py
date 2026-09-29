@@ -88,8 +88,15 @@ def create_app(
         data = request.get_json(silent=True) or {}
 
         order_text = data.get("order_text")
-        if not order_text:
-            return jsonify({"success": False, "message": "order_text is required"}), 400
+        # 类型与空白必须在进入业务链路之前拦下：process_order_from_text 会先落一条
+        # 订单再跑流水线，非法输入因此会留下一条注定失败、且界面上无法清理的订单。
+        if not isinstance(order_text, str) or not order_text.strip():
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "order_text is required and must be a non-empty string",
+                }
+            ), 400
 
         result = container.orchestrator.process_order_from_text(order_text)
         status_code = 200 if result.get("success") else 400
@@ -154,6 +161,16 @@ def create_app(
         result = container.orchestrator.confirm_order(order_id, {"action": action, "comment": comment})
         status_code = 200 if result.get("success") else 400
         return jsonify({"success": result.get("success", False), "data": to_jsonable(result)}), status_code
+
+    # 框架级错误同样返回 JSON，避免客户端在 4xx/5xx 上拿到 HTML 而无法统一解析。
+    @app.errorhandler(413)
+    def request_entity_too_large(_error):
+        limit_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+        return jsonify({"success": False, "message": f"文件超过 {limit_mb} MB 上限"}), 413
+
+    @app.errorhandler(405)
+    def method_not_allowed(_error):
+        return jsonify({"success": False, "message": "Method not allowed"}), 405
 
     @app.errorhandler(404)
     def not_found(_error):
