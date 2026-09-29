@@ -26,7 +26,7 @@ class RuntimeIntegrationTests(unittest.TestCase):
             response = client.get("/api/ready")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json["data"]["materials"], 720)
-            store = container.orchestrator.matching_agent.faiss_manager
+            store = container.orchestrator.faiss_manager
             self.assertEqual(store.index.ntotal, len(store.metadata))
             self.assertTrue(os.path.isfile(directory + "/index/index.faiss"))
             repository = container.orchestrator.order_manager.repository

@@ -15,6 +15,28 @@ jobs:
   backend-test:
     name: Backend tests
     runs-on: ubuntu-latest
+    # 存储契约与端到端就绪检查必须对着真实 PostgreSQL 跑：此前没有服务容器，
+    # 这两个测试类永远被 skip，持久化语义（CAS、隔离、重启回收）从未在 CI 被验证。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: orders
+          POSTGRES_PASSWORD: orders
+          POSTGRES_DB: orders_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orders"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # 打开两个集成测试类；两者缺一即 skip，因此必须同时设置。
+      TEST_DATABASE_URL: postgresql://orders:orders@localhost:5432/orders_test
+      RUN_EMBEDDING_INTEGRATION: "1"
+      # 固定嵌入模型缓存位置，配合 actions/cache 让 sentence-transformers 只下载一次。
+      HF_HOME: ${{ github.workspace }}/.cache/huggingface
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,6 +48,12 @@ jobs:
         run: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.2.2
       - name: Install dependencies
         run: pip install -r requirements.txt
+      # 端到端集成测试会实例化 all-MiniLM-L6-v2；缓存避免每次 CI 重新下载。
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/huggingface
+          key: hf-all-MiniLM-L6-v2
       - name: Run unittest suite
         run: python -m unittest discover -s tests
 
