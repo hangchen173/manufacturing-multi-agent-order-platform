@@ -1,10 +1,9 @@
-"""协作消息的持久化端口与 PostgreSQL 实现（可审计轨迹，只追加）。
+"""协作消息的 PostgreSQL 实现（端口定义见 application/ports/repositories.py）。
 
 有了 `agent_messages`，才能回答“这个决策是谁提出的、谁反对过、依据是什么”。
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -12,17 +11,8 @@ import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from application.ports.repositories import MessageRepository
 from domain.messages import AgentMessage
-
-
-class MessageRepository(ABC):
-    @abstractmethod
-    def append(self, order_id: str, messages: List[AgentMessage]) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def list_for_order(self, order_id: str) -> List[Dict[str, Any]]:
-        raise NotImplementedError
 
 
 class PostgresMessageRepository(MessageRepository):

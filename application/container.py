@@ -26,11 +26,7 @@ class ApplicationContainer:
 
             from application.orchestrators import OrderProcessingOrchestrator
             from application.services import OrderManager
-            from infrastructure.repositories import (
-                PostgresBlackboardRepository,
-                PostgresMessageRepository,
-                PostgresTaskRepository,
-            )
+            from infrastructure.repositories import PostgresOrderRepository
             from infrastructure.vector_store import FAISSManager
             from infrastructure.vector_store.catalog import (
                 load_material_catalog,
@@ -44,11 +40,10 @@ class ApplicationContainer:
                 store.add_documents(documents)
             validate_catalog_index(documents, store.metadata, store.index)
 
+            # 组合根只装配订单仓储；黑板/任务/消息由该适配器自行声明，保证四个仓储同源。
             order_manager = OrderManager(
+                repository=PostgresOrderRepository(self.config.database.url),
                 config=self.config,
-                blackboard_repository=PostgresBlackboardRepository(self.config.database.url),
-                task_repository=PostgresTaskRepository(self.config.database.url),
-                message_repository=PostgresMessageRepository(self.config.database.url),
             )
             orchestrator = OrderProcessingOrchestrator(
                 order_manager=order_manager,

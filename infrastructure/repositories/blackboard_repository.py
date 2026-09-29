@@ -1,10 +1,9 @@
-"""三层黑板的持久化端口与 PostgreSQL 实现。
+"""三层黑板的 PostgreSQL 实现（端口定义见 application/ports/repositories.py）。
 
 `version` 字段支持乐观并发，与订单快照的 `updated_at` CAS 同一套思路。
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -12,17 +11,9 @@ import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from application.ports.repositories import BlackboardRepository
+
 LAYERS = ("control", "claims", "facts")
-
-
-class BlackboardRepository(ABC):
-    @abstractmethod
-    def load(self, order_id: str) -> Optional[Dict[str, Any]]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def save(self, order_id: str, snapshot: Dict[str, Any]) -> bool:
-        raise NotImplementedError
 
 
 class PostgresBlackboardRepository(BlackboardRepository):

@@ -47,7 +47,7 @@ from infrastructure.document_processing import DocumentLoader
 class OrderProcessingOrchestrator:
     def __init__(
         self,
-        order_manager: Optional[OrderManager] = None,
+        order_manager: OrderManager,
         config: Optional[Config] = None,
         document_loader: Optional[DocumentLoader] = None,
         supervisor: Optional[Supervisor] = None,
@@ -56,7 +56,7 @@ class OrderProcessingOrchestrator:
         reference_date: Optional[str] = None,
     ):
         self.config = config or Config()
-        self.order_manager = order_manager or OrderManager(config=self.config)
+        self.order_manager = order_manager
         self.document_loader = document_loader or DocumentLoader()
         self.faiss_manager = faiss_manager
         self._last_usage: Dict[str, int] = self._empty_usage()

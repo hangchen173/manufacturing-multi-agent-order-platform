@@ -1,11 +1,10 @@
-"""任务队列持久化端口与 PostgreSQL 实现。
+"""任务队列的 PostgreSQL 实现（端口定义见 application/ports/repositories.py）。
 
 复用现有 PostgreSQL 实现一个有边界的任务队列，不引入新中间件。
 支持租约（lease）与过期任务回收，使进程被杀后任务不会永久卡在 RUNNING。
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -13,25 +12,8 @@ import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from application.ports.repositories import TaskRepository
 from domain.tasks import TaskStatus
-
-
-class TaskRepository(ABC):
-    @abstractmethod
-    def load(self, order_id: str) -> Optional[Dict[str, Any]]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def save(self, order_id: str, snapshot: Dict[str, Any]) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def claim_lease(self, task_id: str, owner: str, ttl_seconds: int) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def recover_expired(self, now: Optional[datetime] = None) -> List[str]:
-        raise NotImplementedError
 
 
 class PostgresTaskRepository(TaskRepository):

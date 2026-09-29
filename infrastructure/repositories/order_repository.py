@@ -1,39 +1,13 @@
-from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
-
-class OrderRepository(ABC):
-    @abstractmethod
-    def load_all(self, archived: bool = False) -> Dict[str, Dict[str, Any]]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get(self, order_id: str) -> Optional[Dict[str, Any]]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def create(self, snapshot: Dict[str, Any]) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def update(self, snapshot: Dict[str, Any], expected_updated_at: str) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def delete(self, order_id: str, expected_updated_at: str) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def load_index(self, archived: bool = False) -> Dict[str, Any]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def archive(self, order_id: str, expected_updated_at: str) -> bool:
-        raise NotImplementedError
+from application.ports.repositories import CollaborationRepositories, OrderRepository
+from infrastructure.repositories.blackboard_repository import PostgresBlackboardRepository
+from infrastructure.repositories.message_repository import PostgresMessageRepository
+from infrastructure.repositories.task_repository import PostgresTaskRepository
 
 
 class PostgresOrderRepository(OrderRepository):
@@ -146,3 +120,11 @@ class PostgresOrderRepository(OrderRepository):
                 (order_id, expected_updated_at),
             )
             return cursor.rowcount == 1
+
+    def collaboration_repositories(self) -> CollaborationRepositories:
+        # 复用自身连接串，确保协作状态与订单快照落在同一个库（含测试注入的隔离 schema）。
+        return CollaborationRepositories(
+            blackboard=PostgresBlackboardRepository(self.database_url),
+            tasks=PostgresTaskRepository(self.database_url),
+            messages=PostgresMessageRepository(self.database_url),
+        )

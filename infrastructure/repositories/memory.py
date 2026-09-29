@@ -6,12 +6,15 @@ from datetime import datetime, timedelta
 from threading import RLock
 from typing import Any, Dict, List, Optional
 
+from application.ports.repositories import (
+    BlackboardRepository,
+    CollaborationRepositories,
+    MessageRepository,
+    OrderRepository,
+    TaskRepository,
+)
 from domain.messages import AgentMessage
 from domain.tasks import TaskStatus
-from infrastructure.repositories.blackboard_repository import BlackboardRepository
-from infrastructure.repositories.message_repository import MessageRepository
-from infrastructure.repositories.order_repository import OrderRepository
-from infrastructure.repositories.task_repository import TaskRepository
 
 
 class InMemoryOrderRepository(OrderRepository):
@@ -74,6 +77,13 @@ class InMemoryOrderRepository(OrderRepository):
                 raise ValueError("Order already archived")
             self.archived[order_id] = self.active.pop(order_id)
             return True
+
+    def collaboration_repositories(self) -> CollaborationRepositories:
+        return CollaborationRepositories(
+            blackboard=InMemoryBlackboardRepository(),
+            tasks=InMemoryTaskRepository(),
+            messages=InMemoryMessageRepository(),
+        )
 
 
 class InMemoryBlackboardRepository(BlackboardRepository):

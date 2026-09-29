@@ -4,27 +4,17 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Set, Type, TypeVar
 
+from application.ports.repositories import (
+    BlackboardRepository,
+    MessageRepository,
+    OrderRepository,
+    TaskRepository,
+)
 from config import Config
 from domain.exceptions import InvalidOrderStatusException
 from domain.messages import AgentMessage
 from domain.models import FinalOrderResult, MatchedOrder, OrderStatus, ParsedOrder, RiskCheckResult
 from domain.order_state_machine import validate_transition
-from infrastructure.repositories import (
-    BlackboardRepository,
-    MessageRepository,
-    OrderRepository,
-    PostgresBlackboardRepository,
-    PostgresMessageRepository,
-    PostgresOrderRepository,
-    PostgresTaskRepository,
-    TaskRepository,
-)
-from infrastructure.repositories.memory import (
-    InMemoryBlackboardRepository,
-    InMemoryMessageRepository,
-    InMemoryOrderRepository,
-    InMemoryTaskRepository,
-)
 
 ModelT = TypeVar("ModelT")
 
@@ -161,30 +151,20 @@ class OrderProcessingContext:
 class OrderManager:
     def __init__(
         self,
-        repository: Optional[OrderRepository] = None,
+        repository: OrderRepository,
         config: Optional[Config] = None,
-        blackboard_repository: Optional[BlackboardRepository] = None,
-        task_repository: Optional[TaskRepository] = None,
-        message_repository: Optional[MessageRepository] = None,
     ):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config = config or Config()
-        self.repository = repository or PostgresOrderRepository(self.config.database.url)
-        # 四个仓储必须同源。此前订单默认 Postgres（持久）而协作状态默认内存（易失），
-        # 一旦不经容器构造，就会出现「订单快照在、任务图与消息丢」的状态错位——
-        # 订单显示处理中却永久卡死，且不报错。这里让协作状态仓储跟随订单仓储的
-        # 后端与连接目标（如测试注入的隔离 schema）；显式注入的仓储始终优先。
-        url = getattr(self.repository, "database_url", self.config.database.url)
-        in_memory = isinstance(self.repository, InMemoryOrderRepository)
-        self.blackboard_repository = blackboard_repository or (
-            InMemoryBlackboardRepository() if in_memory else PostgresBlackboardRepository(url)
-        )
-        self.task_repository = task_repository or (
-            InMemoryTaskRepository() if in_memory else PostgresTaskRepository(url)
-        )
-        self.message_repository = message_repository or (
-            InMemoryMessageRepository() if in_memory else PostgresMessageRepository(url)
-        )
+        self.repository = repository
+        # 四个仓储必须同源。订单落 Postgres 而协作状态落内存，会让订单在重启后
+        # 卡在中间态且不报任何错（见 P0-1）。同源性由适配器自己声明
+        # （OrderRepository.collaboration_repositories），调用方无需记住这条约定，
+        # OrderManager 也无需 import 任何 infrastructure 模块。
+        collaboration = repository.collaboration_repositories()
+        self.blackboard_repository: BlackboardRepository = collaboration.blackboard
+        self.task_repository: TaskRepository = collaboration.tasks
+        self.message_repository: MessageRepository = collaboration.messages
         if self.config.data.order_auto_archive_days > 0:
             self.archive_terminal_orders(self.config.data.order_auto_archive_days)
 
