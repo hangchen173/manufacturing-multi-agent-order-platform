@@ -50,6 +50,26 @@ class OfflineFAISSManager(FakeFAISSManager):
         super().__init__([], [])
 
 
+REVIEW_SUMMARY = "审核参考（测试替身）：本单存在风险，建议人工核对规格与数量。"
+
+
+class FixedReviewLLM:
+    """审核助手专用假模型。
+
+    必须与抽取用的载荷迭代器分开：若共用同一个 `responses` 迭代器，审核助手会
+    消耗掉一条抽取载荷，导致后续抽取触发 StopIteration。同时它也防止审核助手
+    落到真实客户端上（那会让单测发起真实网络调用）。
+    """
+
+    def __init__(self, text: str = REVIEW_SUMMARY):
+        self.text = text
+        self.calls = 0
+
+    def __call__(self, _prompt_value):
+        self.calls += 1
+        return AIMessage(content=self.text)
+
+
 def make_config(evaluation_as_of: str = DEFAULT_REFERENCE_DATE) -> Config:
     config = Config()
     config.data.order_auto_archive_days = 0
@@ -58,7 +78,8 @@ def make_config(evaluation_as_of: str = DEFAULT_REFERENCE_DATE) -> Config:
     return config
 
 
-def build_agents(*, config: Config, llm=None, faiss_manager=None) -> Dict[AgentRole, Any]:
+def build_agents(*, config: Config, llm=None, faiss_manager=None,
+                 review_llm=None) -> Dict[AgentRole, Any]:
     return {
         AgentRole.STRUCTURE_SCOUT: StructureScout(config=config),
         AgentRole.EXTRACTOR: Extractor(llm=llm, config=config),
@@ -71,20 +92,25 @@ def build_agents(*, config: Config, llm=None, faiss_manager=None) -> Dict[AgentR
         AgentRole.POLICY_RISK: PolicyRisk(config=config),
         AgentRole.SCHEDULE_RISK: ScheduleRisk(config=config),
         AgentRole.ADJUDICATOR: Adjudicator(config=config),
-        AgentRole.REVIEW_ASSISTANT: ReviewAssistant(faiss_manager=faiss_manager, config=config),
+        AgentRole.REVIEW_ASSISTANT: ReviewAssistant(
+            llm=review_llm if review_llm is not None else FixedReviewLLM(),
+            faiss_manager=faiss_manager, config=config,
+        ),
     }
 
 
 class SupervisorHarness:
     """一组已装配好的协作组件，便于单测直接驱动。"""
 
-    def __init__(self, *, config, agents, manager, supervisor, orchestrator, prompts):
+    def __init__(self, *, config, agents, manager, supervisor, orchestrator, prompts,
+                 review_llm=None):
         self.config = config
         self.agents = agents
         self.manager = manager
         self.supervisor = supervisor
         self.orchestrator = orchestrator
         self.prompts = prompts
+        self.review_llm = review_llm
 
 
 def build_harness(
@@ -97,6 +123,7 @@ def build_harness(
     llm=None,
     repository=None,
     rng_seed: Optional[int] = None,
+    review_llm=None,
 ) -> SupervisorHarness:
     config = config or make_config()
     # 默认使用离线向量库替身，避免单测触发真实嵌入模型加载（慢且耗内存）。
@@ -109,7 +136,9 @@ def build_harness(
             prompts.append(prompt_value)
             return AIMessage(content=json.dumps(next(responses)))
 
-    agents = build_agents(config=config, llm=llm, faiss_manager=faiss_manager)
+    review_llm = review_llm if review_llm is not None else FixedReviewLLM()
+    agents = build_agents(config=config, llm=llm, faiss_manager=faiss_manager,
+                          review_llm=review_llm)
     if catalog is None:
         catalog = list(getattr(faiss_manager, "metadata", []) or [])
     manager = OrderManager(repository=repository or InMemoryOrderRepository(), config=config)
@@ -123,7 +152,7 @@ def build_harness(
     )
     return SupervisorHarness(
         config=config, agents=agents, manager=manager, supervisor=supervisor,
-        orchestrator=orchestrator, prompts=prompts,
+        orchestrator=orchestrator, prompts=prompts, review_llm=review_llm,
     )
 
 

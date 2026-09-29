@@ -21,7 +21,7 @@ from application.protocol.adversarial import build_counter_evidence_feedback
 from application.protocol.budget import Budget, BudgetExhausted
 from domain.agent_roles import AgentRole
 from domain.messages import AgentMessage, Performative
-from domain.models import OrderStatus
+from domain.models import MatchedOrder, OrderStatus, RiskCheckResult
 from domain.tasks import Task, TaskGraph, TaskStatus
 
 STAGE_STATUS = {
@@ -539,8 +539,55 @@ class Supervisor:
         self._persist(board, graph)
         for message in messages:
             if message.performative == Performative.VERDICT:
-                return dict(message.payload or {})
+                verdict = dict(message.payload or {})
+                if verdict.get("needs_confirmation"):
+                    self._escalate_and_assist(board, graph, budget, verdict, message)
+                return verdict
         raise RuntimeError("Adjudicator 未产出裁决")
+
+    # ================================================================== escalate
+    def _escalate_and_assist(self, board: Blackboard, graph: TaskGraph, budget: Budget,
+                             verdict: Dict[str, Any], verdict_message: AgentMessage) -> None:
+        """裁决需人工确认时：发 ESCALATE 声明升级，并派 ReviewAssistant 任务。
+
+        此前 ReviewAssistant 只挂在「人工请求」那条路上（POST /review-suggestion），
+        ESCALATE 从未发出——升级事件不进消息轨迹，/trace 因此答不出「为何升级」。
+        """
+        self._publish(board, {"escalate": [AgentMessage(
+            order_id=board.order_id,
+            task_id=verdict_message.task_id,
+            sender=AgentRole.SUPERVISOR.value,
+            performative=Performative.ESCALATE,
+            in_reply_to=verdict_message.message_id,
+            subject={"claim_subject": "order.action"},
+            payload={"action": verdict.get("action"),
+                     "reason": verdict.get("reason"),
+                     "reason_chain": verdict.get("reason_chain")},
+        )]})
+
+        task = graph.add(Task(
+            order_id=board.order_id, agent=AgentRole.REVIEW_ASSISTANT.value, stage="assist",
+            slice_key={
+                "matched_order": MatchedOrder.model_validate(verdict["matched_order"]),
+                "risk_result": RiskCheckResult.model_validate(verdict["risk_result"]),
+            },
+        ))
+        self._publish(board, {"request": [AgentMessage(
+            order_id=board.order_id,
+            task_id=task.task_id,
+            sender=AgentRole.SUPERVISOR.value,
+            recipient=AgentRole.REVIEW_ASSISTANT.value,
+            performative=Performative.REQUEST,
+            in_reply_to=verdict_message.message_id,
+            subject={"claim_subject": "order.review_assistance"},
+            payload={"task_id": task.task_id, "stage": task.stage},
+        )]})
+
+        try:
+            self._publish(board, {task.task_id: self._execute_task(task, budget)})
+        except Exception as exc:  # noqa: BLE001 - 审核助手是旁路，失败不得改变订单终态
+            self._logger.warning("审核参考生成失败（不影响订单终态）: %s", exc)
+        self._persist(board, graph)
 
     # ================================================================== helpers
     def _enter_stage(self, board: Blackboard, stage: str) -> None:

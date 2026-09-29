@@ -5,12 +5,14 @@ from langchain_core.messages import AIMessage
 from application.agents import ReviewAssistant
 from config import Config
 from domain.agent_roles import AgentRole
+from domain.messages import Performative
 from domain.models import (
     MatchedOrder,
     MatchedOrderItem,
     RiskCheckResult,
     RiskIssue,
 )
+from domain.tasks import TaskStatus
 from tests.support import (
     FakeFAISSManager,
     build_harness,
@@ -240,6 +242,57 @@ class ReviewSuggestionOrchestratorTests(unittest.TestCase):
 
         self.assertFalse(result["success"])
         self.assertEqual(result["message"], "订单不存在")
+
+    def test_escalation_is_recorded_and_assist_task_is_dispatched(self):
+        """裁决转人工时必须留下 ESCALATE 事件，并真正派发 review_assistant 任务。
+
+        回归背景：ReviewAssistant 一度只挂在「人工主动请求」这条路上
+        （POST /review-suggestion），裁决阶段的升级既不写消息轨迹、也不进任务 DAG，
+        导致 /trace 答不出「为何升级」、/tasks 看不到旁路任务。
+        本测试故意不替换 agents 字典里的 ReviewAssistant，让它走真实 handle() 链路。
+        """
+        store = FakeFAISSManager(SUFFIX_CATALOG, search_results=[(SUFFIX_CATALOG[0], 0.5)])
+        harness = build_harness(
+            payloads=[order_payload([item("交流接触器", "CJX2-0910 AC220V", 10, "个", 200.0)])],
+            faiss_manager=store,
+        )
+        processed = harness.orchestrator.process_order_from_text(
+            "1 交流接触器 CJX2-0910 AC220V 10 个 200.0"
+        )
+        self.assertTrue(processed["needs_confirmation"])
+        order_id = processed["order_id"]
+
+        messages = harness.orchestrator.get_trace(order_id)["messages"]
+        by_performative = {}
+        for message in messages:
+            by_performative.setdefault(message["performative"], []).append(message)
+
+        self.assertIn(Performative.ESCALATE.value, by_performative)
+        escalate = by_performative[Performative.ESCALATE.value][0]
+        self.assertEqual(escalate["sender"], AgentRole.SUPERVISOR.value)
+        self.assertEqual(escalate["payload"]["action"], "manual_review")
+
+        self.assertIn(Performative.REQUEST.value, by_performative)
+        request = by_performative[Performative.REQUEST.value][0]
+        self.assertEqual(request["sender"], AgentRole.SUPERVISOR.value)
+        self.assertEqual(request["recipient"], AgentRole.REVIEW_ASSISTANT.value)
+
+        tasks = harness.orchestrator.get_tasks(order_id)
+        assist = [task for task in tasks if task["stage"] == "assist"]
+        self.assertEqual(len(assist), 1)
+        self.assertEqual(assist[0]["agent"], AgentRole.REVIEW_ASSISTANT.value)
+        self.assertEqual(assist[0]["status"], TaskStatus.DONE.value)
+
+        # 设计文档 §S8：审核建议必须以证据形式写入黑板 Layer 2，而非只回一段文本。
+        inform = [
+            message for message in by_performative.get(Performative.INFORM.value, [])
+            if message["sender"] == AgentRole.REVIEW_ASSISTANT.value
+        ]
+        self.assertEqual(len(inform), 1)
+        self.assertTrue(inform[0]["evidence"])
+
+        # 旁路任务确实调用了模型：升级事件之外还留下了审核参考
+        self.assertEqual(harness.review_llm.calls, 1)
 
 
 if __name__ == "__main__":
