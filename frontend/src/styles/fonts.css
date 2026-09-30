@@ -1,0 +1,17 @@
+/**
+ * 字体资源：缝合像素字体（Fusion Pixel Font）12px 比例模式 · 简体中文。
+ *
+ * 授权：SIL Open Font License 1.1，允许随应用自由使用、嵌入与再分发，
+ * 许可证全文随字体一同存放在 public/fonts/OFL.txt。
+ *
+ * 该字体仅在 12px / 24px 的整数倍下渲染最锐利，因此字阶只保留这两档，
+ * 具体取值见 tokens.css。只声明 400 一个字重，让浏览器对加粗文本做合成加粗，
+ * 从而在单字重像素字体上仍然保留标题与正文的层级差异。
+ */
+@font-face {
+  font-family: "Fusion Pixel 12px Proportional";
+  src: url("/fonts/fusion-pixel-12px-proportional-zh-hans.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
