@@ -1,9 +1,11 @@
 /**
- * 组件层：应用外壳、侧栏、表单、结果面板、数据表格。
- * 动效只作用于 transform / opacity / box-shadow，全部走合成层，避免触发布局重排。
+ * 组件层：Windows 98 外观的应用外壳、侧栏、表单、结果面板、数据表格。
+ *
+ * 本次改造只落在视觉层：DOM 结构、类名、交互逻辑与接口调用全部保持原样，
+ * 布局尺寸（标题栏高度、栅格列宽、断点）沿用原值，避免影响既有滚动与吸顶行为。
  */
 
-/* ---------- 应用外壳 ---------- */
+/* ---------- 应用外壳：窗口标题栏 ---------- */
 .app-header {
   position: sticky;
   top: 0;
@@ -12,10 +14,10 @@
   align-items: center;
   min-height: 68px;
   padding: 0 var(--space-8);
-  background: linear-gradient(180deg, var(--header-from) 0%, var(--header-to) 100%);
-  color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 -2px 0 0 var(--accent), 0 10px 30px -24px rgba(10, 21, 36, 0.9);
+  background: linear-gradient(90deg, var(--header-from) 0%, var(--header-to) 100%);
+  color: #ffffff;
+  /* 外侧两道高光与一道投影，模拟窗口边框压在标题栏上的厚度。 */
+  box-shadow: inset 1px 1px 0 0 #ffffff, inset -1px -1px 0 0 #000000, 0 2px 0 0 #808080;
 }
 
 .app-header__brand {
@@ -25,52 +27,71 @@
   min-width: 0;
 }
 
+/* 标题栏左侧的应用图标：换成 16px 像素图标，保持原有的装饰语义。 */
 .app-header__mark {
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: linear-gradient(150deg, rgba(20, 184, 166, 0.26), rgba(20, 184, 166, 0.08));
-  border: 1px solid rgba(20, 184, 166, 0.32);
-  color: #6ee7d6;
+  border-radius: 0;
+  background: var(--surface) url("/icons/app.svg") center / 16px 16px no-repeat;
+  box-shadow: var(--bevel-raised);
+}
+
+.app-header__mark svg {
+  display: none;
 }
 
 .app-header__title {
   display: block;
-  font-size: var(--text-lg);
-  font-weight: 650;
+  font-size: var(--text-xl);
+  font-weight: 700;
   line-height: var(--leading-tight);
+  color: #ffffff;
 }
 
 .app-header__subtitle {
   display: block;
   margin-top: 2px;
   font-size: var(--text-sm);
-  color: #9fb0c4;
+  color: #c0c0c0;
 }
 
+/* 桌面留白：左右与底部露出青绿桌面底色。 */
 .app__layout {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
   max-width: 1480px;
   margin: 0 auto;
   min-height: calc(100vh - 68px);
+  padding: 0 var(--space-2);
 }
 
-/* ---------- 侧栏 ---------- */
+/* ---------- 侧栏：开始菜单面板 ---------- */
 .sidebar {
   position: sticky;
   top: 68px;
   align-self: start;
-  height: calc(100vh - 68px);
+  height: calc(100vh - 68px - var(--space-2));
   overflow: auto;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-2);
   background: var(--surface);
-  border-right: 1px solid var(--border);
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
+  box-shadow: var(--bevel-raised);
+}
+
+/* 常驻的开始菜单标题条：纯装饰元素，不承担任何交互，因此不响应指针。 */
+.sidebar::before {
+  content: "开始";
+  display: block;
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--space-2);
+  padding: 4px var(--space-2) 4px 26px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface) url("/icons/start.svg") 6px center / 16px 16px no-repeat;
+  box-shadow: var(--bevel-raised);
+  pointer-events: none;
+  user-select: none;
 }
 
 .sidebar__title {
@@ -83,70 +104,80 @@
 
 .sidebar__title h2 {
   font-size: var(--text-md);
-  font-weight: 650;
+  font-weight: 700;
   color: var(--ink);
 }
 
 .sidebar__count {
   margin-left: auto;
-  padding: 1px 7px;
-  border-radius: var(--radius-pill);
+  padding: 0 5px;
+  border-radius: 0;
   background: var(--surface-sunken);
-  color: var(--ink-secondary);
+  color: var(--ink);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  box-shadow: var(--bevel-field);
 }
 
 .sidebar__empty {
-  margin-top: var(--space-4);
-  padding: var(--space-5) var(--space-3);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
+  padding: var(--space-4) var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-muted);
+  box-shadow: var(--bevel-field);
   text-align: center;
   font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
+/* 历史订单列表：白色凹陷列表框，选中与悬停使用经典深蓝反白。 */
 .order-list {
   display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
+  gap: 0;
+  margin-top: var(--space-3);
+  padding: 2px;
+  background: var(--surface-sunken);
+  box-shadow: var(--bevel-sunken);
 }
 
 .order-item {
   /* 隔离布局与样式计算：列表项数量增长时，单项改动不会影响兄弟节点。 */
   contain: layout style;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   width: 100%;
-  padding: var(--space-3);
+  padding: 4px var(--space-2);
   text-align: left;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-muted);
-  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
-.order-item:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--border-strong);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
+.order-item:hover:not(:disabled),
 .order-item--selected,
 .order-item--selected:hover:not(:disabled) {
-  border-color: var(--brand);
-  background: var(--brand-soft);
-  box-shadow: inset 3px 0 0 0 var(--brand);
+  background: #000080;
+}
+
+.order-item:hover:not(:disabled) .order-item__id,
+.order-item:hover:not(:disabled) .order-item__time,
+.order-item--selected .order-item__id,
+.order-item--selected .order-item__time {
+  color: #ffffff;
+}
+
+/* 深蓝底上的焦点框改用白色，否则黑色虚线不可见。 */
+.order-item--selected:focus-visible,
+.order-item:hover:not(:disabled):focus-visible {
+  outline-color: #ffffff;
 }
 
 .order-item__id {
   font-family: var(--font-mono);
   font-size: var(--text-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
 }
 
@@ -156,7 +187,7 @@
 }
 
 .order-item:disabled {
-  opacity: 0.6;
+  opacity: 1;
 }
 
 /* ---------- 状态徽标 ---------- */
@@ -165,17 +196,19 @@
   align-items: center;
   gap: 5px;
   width: max-content;
-  padding: 3px 8px 3px 6px;
-  border-radius: var(--radius-pill);
+  padding: 0 5px;
+  /* 不带颜色值的 border 取 currentColor，随状态色一起变化。 */
+  border: 1px solid;
+  border-radius: 0;
   font-size: var(--text-xs);
-  font-weight: 600;
-  line-height: 1.5;
+  font-weight: 700;
+  line-height: 1.6;
 }
 
 .status__dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
   background: currentColor;
   flex-shrink: 0;
 }
@@ -209,21 +242,23 @@
   animation: pulse 1.4s var(--ease) infinite;
 }
 
-/* ---------- 工作区与面板 ---------- */
+/* ---------- 工作区与窗口面板 ---------- */
 .workspace {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-8) 56px;
+  padding: var(--space-4) var(--space-4) 56px;
 }
 
+/* 每个面板都是一扇 Windows 98 窗口：灰色窗框 + 深蓝标题栏。 */
 .panel {
-  padding: var(--space-6);
-  margin-bottom: var(--space-5);
+  --panel-pad: var(--space-3);
+  padding: var(--panel-pad);
+  margin-bottom: var(--space-4);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-raised);
 }
 
 .panel--result {
@@ -232,27 +267,43 @@
 
 .section-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
 }
 
 .section-heading > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .section-heading > .status {
   flex-shrink: 0;
-  margin-top: 2px;
+}
+
+/* 面板标题区渲染成窗口标题栏，四周留出窗框厚度，避免压住面板凸起边框。 */
+.panel > .section-heading {
+  margin: calc(var(--panel-pad) * -1 + var(--frame)) calc(var(--panel-pad) * -1 + var(--frame))
+    var(--space-3);
+  padding: 3px var(--space-2);
+  background: linear-gradient(90deg, var(--header-from) 0%, var(--header-to) 100%);
+  color: #ffffff;
+}
+
+.panel > .section-heading h1,
+.panel > .section-heading h2 {
+  color: #ffffff;
 }
 
 .eyebrow {
-  margin-bottom: 6px;
   font-size: var(--text-xs);
-  font-weight: 650;
+  font-weight: 700;
   /* 小号标签加微量字距，中文标签更显精致、可辨识度更高。 */
   letter-spacing: 0.08em;
-  color: var(--brand);
+  color: #c0c0c0;
 }
 
 .order-title {
@@ -267,61 +318,61 @@
   overflow-wrap: anywhere;
 }
 
-/* ---------- 表单 ---------- */
+/* ---------- 表单控件 ---------- */
 .segmented {
   display: inline-flex;
   gap: 2px;
-  padding: 3px;
-  margin: var(--space-6) 0 var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
+  padding: 0;
+  margin: var(--space-4) 0 var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .segmented__item {
-  padding: 7px 16px;
-  border-radius: var(--radius-sm);
+  padding: 4px 14px;
+  border-radius: 0;
   font-size: var(--text-md);
-  font-weight: 500;
-  color: var(--ink-secondary);
-  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease);
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--bevel-raised);
 }
 
 .segmented__item:hover:not(:disabled):not(.segmented__item--active) {
   color: var(--ink);
 }
 
+/* 选中项按下凹陷，等价于 Windows 98 选项卡的当前页。 */
 .segmented__item--active {
-  background: var(--surface);
-  color: var(--brand-strong);
-  font-weight: 650;
-  box-shadow: var(--shadow-xs);
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: var(--bevel-pressed);
 }
 
 .field-textarea {
   display: block;
   width: 100%;
   min-height: 168px;
-  padding: var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  padding: var(--space-2);
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-sunken);
   color: var(--ink);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   resize: vertical;
-  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  box-shadow: var(--bevel-sunken);
 }
 
 .field-textarea::placeholder {
-  color: var(--ink-muted);
+  color: #808080;
 }
 
 .field-textarea:focus {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px var(--brand-ring);
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
 }
 
 .file-drop {
@@ -332,17 +383,16 @@
   gap: var(--space-2);
   min-height: 168px;
   padding: var(--space-5);
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-sunken);
   color: var(--ink-secondary);
   cursor: pointer;
-  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+  box-shadow: var(--bevel-sunken);
 }
 
 .file-drop:hover {
-  border-color: var(--brand);
-  background: var(--brand-soft);
+  color: var(--ink);
 }
 
 .file-drop svg {
@@ -351,7 +401,7 @@
 
 .file-drop strong {
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   overflow-wrap: anywhere;
   text-align: center;
@@ -370,48 +420,34 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 9px 16px;
-  border-radius: var(--radius-sm);
+  padding: 4px var(--space-3);
+  border-radius: 0;
   font-size: var(--text-md);
-  font-weight: 600;
-  transition: background-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--bevel-raised);
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(1px);
+  box-shadow: var(--bevel-pressed);
 }
 
+/* 主按钮即默认按钮：凸起之外再套一圈黑边。 */
 .button--primary {
   margin-top: var(--space-4);
-  background: var(--brand);
-  color: #fff;
-  box-shadow: var(--shadow-xs);
-}
-
-.button--primary:hover:not(:disabled) {
-  background: var(--brand-strong);
-  box-shadow: var(--shadow-md);
+  font-weight: 700;
+  box-shadow: var(--bevel-raised), 0 0 0 1px #000000;
 }
 
 .button--approve {
-  background: var(--brand);
-  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--bevel-raised), 0 0 0 1px #000000;
 }
 
-.button--approve:hover:not(:disabled) {
-  background: var(--brand-strong);
-}
-
+/* 拒绝保留深红文字，避免与"确认通过"在视觉上被抹平。 */
 .button--reject {
-  background: var(--surface);
   color: var(--danger);
-  border: 1px solid #e6b4b9;
-}
-
-.button--reject:hover:not(:disabled) {
-  background: var(--danger-soft);
-  border-color: var(--danger);
 }
 
 /* ---------- 提示条 ---------- */
@@ -419,12 +455,14 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  margin-top: var(--space-4);
-  padding: 11px var(--space-3);
-  border-radius: var(--radius-sm);
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  border: 0;
+  border-radius: 0;
   font-size: var(--text-md);
   line-height: var(--leading-snug);
   overflow-wrap: anywhere;
+  box-shadow: var(--bevel-field);
 }
 
 .alert svg {
@@ -435,7 +473,6 @@
 .alert--error {
   background: var(--danger-soft);
   color: var(--danger);
-  border: 1px solid #f2c6ca;
 }
 
 /* ---------- 人工确认 ---------- */
@@ -443,13 +480,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-5);
-  margin: var(--space-5) 0;
-  padding: var(--space-4);
-  border: 1px solid #eed9a4;
-  border-left: 3px solid var(--warn);
-  border-radius: var(--radius-md);
-  background: #fffbf0;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: var(--warn-soft);
+  box-shadow: var(--bevel-field);
 }
 
 .confirmation h3 {
@@ -472,8 +509,8 @@
 
 /* ---------- 结果分区块 ---------- */
 .result-section {
-  margin: var(--space-5) 0;
-  padding-top: var(--space-4);
+  margin: var(--space-4) 0;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--border);
 }
 
@@ -504,11 +541,12 @@
 }
 
 .decision {
-  margin: var(--space-5) 0;
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  border: 0;
+  border-radius: 0;
   background: var(--surface-muted);
-  border: 1px solid var(--border);
+  box-shadow: var(--bevel-field);
 }
 
 .decision h3 {
@@ -536,8 +574,9 @@
 
 .severity {
   flex-shrink: 0;
-  padding: 1px 6px;
-  border-radius: var(--radius-xs);
+  padding: 0 5px;
+  border: 1px solid;
+  border-radius: 0;
   font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -558,19 +597,20 @@
   background: var(--info-soft);
 }
 
-/* ---------- 指标卡 ---------- */
+/* ---------- 指标条 ---------- */
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: var(--space-5) 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  margin: var(--space-4) 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-sunken);
   overflow: hidden;
+  box-shadow: var(--bevel-field);
 }
 
 .metrics__item {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
 }
 
 .metrics__item + .metrics__item {
@@ -586,7 +626,7 @@
 .metrics dd {
   margin: 0;
   font-size: var(--text-lg);
-  font-weight: 650;
+  font-weight: 700;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
@@ -595,10 +635,10 @@
 .table-wrap {
   max-height: 520px;
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-sunken);
+  box-shadow: var(--bevel-sunken);
 }
 
 .data-table {
@@ -610,28 +650,24 @@
 
 .data-table th,
 .data-table td {
-  padding: 11px var(--space-3);
+  padding: 5px var(--space-2);
   text-align: left;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--surface-muted);
   white-space: nowrap;
   vertical-align: top;
 }
 
-/* 表头吸顶：长表格滚动时列含义始终可见。 */
+/* 表头吸顶：长表格滚动时列含义始终可见，并保留凸起分隔线。 */
 .data-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--surface-muted);
-  color: var(--ink-secondary);
+  background: var(--surface);
+  color: var(--ink);
   font-size: var(--text-xs);
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  box-shadow: inset 0 -1px 0 var(--border);
-}
-
-.data-table tbody tr {
-  transition: background-color var(--dur-fast) var(--ease);
+  box-shadow: inset 0 -1px 0 var(--border), inset 0 1px 0 #ffffff;
 }
 
 .data-table tbody tr:hover {
@@ -686,23 +722,26 @@
 }
 
 .empty {
-  padding: var(--space-4);
+  padding: var(--space-3);
   font-size: var(--text-md);
   color: var(--ink-muted);
 }
 
 /* ---------- 状态流转 ---------- */
 .transitions {
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--border);
   font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
 .transitions summary {
-  color: var(--ink-secondary);
-  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 700;
   cursor: pointer;
   list-style: none;
 }
@@ -711,16 +750,24 @@
   display: none;
 }
 
+/* 展开标记做成凸起小方块里的 +/−，替代原来的旋转箭头。 */
 .transitions summary::before {
-  content: "›";
-  display: inline-block;
-  margin-right: 6px;
-  color: var(--brand);
-  transition: transform var(--dur-fast) var(--ease);
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--bevel-raised);
 }
 
 .transitions[open] summary::before {
-  transform: rotate(90deg);
+  content: "-";
 }
 
 .transitions p {
@@ -736,19 +783,18 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: 320px;
-  padding: 72px var(--space-6);
+  padding: var(--space-8) var(--space-6);
   text-align: center;
   color: var(--ink-muted);
-  border-style: dashed;
-  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-muted) 100%);
+  background: var(--surface);
 }
 
 .panel--placeholder svg {
-  color: #9fb0c4;
+  color: var(--border);
 }
 
 .panel--placeholder h2 {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   color: var(--ink-secondary);
 }
 
@@ -757,12 +803,15 @@
   font-size: var(--text-md);
 }
 
-/* ---------- 骨架屏 ---------- */
+/* ---------- 骨架屏：点阵抖动代替渐变流光 ---------- */
 .skeleton {
-  border-radius: var(--radius-md);
-  background: linear-gradient(90deg, var(--surface-sunken) 25%, #f6f8fa 37%, var(--surface-sunken) 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 0;
+  background-color: var(--surface-muted);
+  background-image: linear-gradient(45deg, #ffffff 25%, transparent 25%, transparent 75%, #ffffff 75%),
+    linear-gradient(45deg, #ffffff 25%, transparent 25%, transparent 75%, #ffffff 75%);
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
+  animation: pulse 1.4s var(--ease) infinite;
 }
 
 .skeleton--order {
@@ -771,21 +820,12 @@
 
 /* ---------- 动效 ---------- */
 .spin {
-  animation: rotate 0.85s linear infinite;
+  animation: rotate 0.85s steps(8, end) infinite;
 }
 
 @keyframes rotate {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes shimmer {
-  from {
-    background-position: 100% 50%;
-  }
-  to {
-    background-position: 0 50%;
   }
 }
 
@@ -795,7 +835,7 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.45;
   }
 }
 
@@ -824,8 +864,6 @@
     position: static;
     height: auto;
     max-height: 220px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
   }
 
   .order-list {
@@ -836,11 +874,11 @@
   }
 
   .workspace {
-    padding: var(--space-4) var(--space-4) 40px;
+    padding: var(--space-3) var(--space-3) 40px;
   }
 
   .panel {
-    padding: var(--space-4);
+    --panel-pad: var(--space-2);
   }
 
   .confirmation {

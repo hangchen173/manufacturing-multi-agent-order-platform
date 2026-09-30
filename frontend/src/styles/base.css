@@ -1,5 +1,5 @@
 /**
- * 基础层：重置、全局排版规则、可访问性基线。
+ * 基础层：重置、Windows 98 桌面基线、经典滚动条与可访问性规则。
  */
 *,
 *::before,
@@ -15,6 +15,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  /* 经典青绿桌面，窗口之间的缝隙里露出底色。 */
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -22,10 +23,9 @@ body {
   line-height: var(--leading-normal);
   /* 中文字形不做字距压缩，保持字形间距为 0；西文小字标签单独加微量字距。 */
   letter-spacing: 0;
-  font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  /* 像素字体必须关闭抗锯齿，否则 12px 字形会被糊成灰边。 */
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
 }
 
 h1,
@@ -33,7 +33,7 @@ h2,
 h3,
 h4 {
   margin: 0;
-  font-weight: 650;
+  font-weight: 700;
   line-height: var(--leading-tight);
   color: var(--ink);
   /* 标题断行更均衡，避免最后一行只剩一两个字。 */
@@ -81,15 +81,17 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 禁用态沿用凸起边框，只把文字洗淡，符合 Windows 98 的控件约定。 */
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  color: #808080;
+  text-shadow: 1px 1px 0 #ffffff;
 }
 
-/* 键盘导航的可见焦点；鼠标点击不显示焦点环，避免视觉噪音。 */
+/* 键盘导航的可见焦点：Windows 98 的虚线焦点框，内缩避免撑开布局。 */
 :focus-visible {
-  outline: 2px solid var(--brand-ring);
-  outline-offset: 2px;
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
 }
 
 :focus:not(:focus-visible) {
