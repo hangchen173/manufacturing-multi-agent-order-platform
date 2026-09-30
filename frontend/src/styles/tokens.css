@@ -1,0 +1,88 @@
+/**
+ * 设计令牌：颜色、字阶、间距、圆角、阴影、动效曲线。
+ * 所有组件样式只引用这里的变量，改版时无需逐个组件调整。
+ */
+:root {
+  color-scheme: light;
+
+  /* 字体栈：全部为系统字体，避免引入渲染阻塞的 Web Font 请求；
+     若本机装有 Inter 则优先使用，否则回落到平台最优中文字体。 */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
+    "Segoe UI", "PingFang SC", "HarmonyOS Sans SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* 字阶 */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.4;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.75;
+
+  /* 中性色 */
+  --canvas: #f4f6f8;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-sunken: #eef1f5;
+  --border: #e6eaf0;
+  --border-strong: #d5dbe4;
+
+  --ink: #0e1a2b;
+  --ink-secondary: #55637a;
+  --ink-muted: #8a96a8;
+
+  /* 品牌色 */
+  --brand: #0e7c6b;
+  --brand-strong: #0a6255;
+  --brand-soft: #e9f5f2;
+  --brand-ring: rgba(14, 124, 107, 0.3);
+  --accent: #14b8a6;
+
+  --header-from: #101f34;
+  --header-to: #0a1524;
+
+  /* 语义色 */
+  --info: #2f6fb8;
+  --info-soft: #eaf2fd;
+  --warn: #8f5c09;
+  --warn-soft: #fdf3da;
+  --danger: #ad2b37;
+  --danger-soft: #fdecec;
+  --ok: #0f6b58;
+  --ok-soft: #e6f5ef;
+
+  /* 圆角 */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* 阴影：低透明度多层叠加，避免单层大阴影带来的"塑料感" */
+  --shadow-xs: 0 1px 2px rgba(14, 26, 43, 0.05);
+  --shadow-sm: 0 1px 2px rgba(14, 26, 43, 0.04), 0 1px 3px rgba(14, 26, 43, 0.06);
+  --shadow-md: 0 6px 16px -6px rgba(14, 26, 43, 0.12), 0 2px 4px -2px rgba(14, 26, 43, 0.06);
+  --shadow-lg: 0 18px 40px -18px rgba(14, 26, 43, 0.22);
+
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* 动效 */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+}

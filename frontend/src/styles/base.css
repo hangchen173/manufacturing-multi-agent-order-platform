@@ -1,0 +1,125 @@
+/**
+ * 基础层：重置、全局排版规则、可访问性基线。
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  /* 中文字形不做字距压缩，保持字形间距为 0；西文小字标签单独加微量字距。 */
+  letter-spacing: 0;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 650;
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  /* 标题断行更均衡，避免最后一行只剩一两个字。 */
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--text-xl);
+}
+
+h2 {
+  font-size: var(--text-lg);
+}
+
+h3 {
+  font-size: var(--text-base);
+}
+
+p {
+  margin: 0;
+  /* 正文断行优先避免孤行，同时不做强制均衡以保持自然。 */
+  text-wrap: pretty;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* 键盘导航的可见焦点；鼠标点击不显示焦点环，避免视觉噪音。 */
+:focus-visible {
+  outline: 2px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 等宽数字：数值列纵向对齐，避免刷新时数字宽度跳动。 */
+.num,
+.score,
+.data-table td,
+.order-item__id,
+.metrics dd {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* 屏外长内容跳过布局与绘制，长结果页滚动更轻。 */
+.defer-paint {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}
+
+/* 尊重系统的减少动效偏好。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
