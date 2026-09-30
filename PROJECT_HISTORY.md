@@ -49,9 +49,10 @@
 - **三层黑板**：L3 控制状态（仅 Supervisor 可写）/ L2 主张与证据（只追加）/ L1 订单事实（仅 Adjudicator 可写）。
 - **7 种言后行为**：REQUEST / INFORM / PROPOSE / CHALLENGE / VERDICT / REFUSE / ESCALATE，无自由对话。
 - **对抗协议**：PROPOSE → CHALLENGE（须给可复现反证）→ VERDICT。
-- **10 个 Agent 节点**：`structure_scout`、`extractor`、`catalog_matcher`、`semantic_matcher`、
-  `disambiguator`、`grounding_verifier`、`policy_risk`、`schedule_risk`、`adjudicator`（+ Supervisor）。
-  其中只有 `extractor` 与 `review_assistant` 是 LLM 角色，其余为确定性节点（0 token）。
+- **11 个 Agent**（10 个业务 + 1 个编排）——业务：`structure_scout`、`extractor`、`grounding_verifier`、
+  `catalog_matcher`、`semantic_matcher`、`disambiguator`、`policy_risk`、`schedule_risk`、
+  `adjudicator`、`review_assistant`；编排：`supervisor`。
+  其中只有 `extractor` 与 `review_assistant` 是 LLM 角色，其余 8 个为确定性节点（0 token）。
 - **失败语义明确**：预算耗尽 → ESCALATE 到人工，绝不静默通过；结构错误带反馈重抽，超时/截断不带反馈。
 
 **做得好的部分（应保持）：**
@@ -171,28 +172,43 @@
 
 ## 6. 风险清单（尚未处理）
 
-### P0 —— 必须立即处理
+### P0 —— 已处置（2026-09-29）
 
-**泄露的 API 密钥尚未轮换。** 实测两个真实密钥仍存活：
+**曾进入本地 git 历史的 API 密钥**（DeepSeek、DashScope 各一把）已从本仓库清除。
 
-```
-backup-before-secret-purge        -> 2 hit(s) [DeepSeek key, DashScope key]
-refs/original/refs/heads/develop  -> 2 hit(s) [DeepSeek key, DashScope key]
-origin/develop                    -> 0 hit(s)
-HEAD                              -> 0 hit(s)
-```
+> **准确定性（修正早前措辞）**：这两把密钥**曾以明文进入本地 git 历史**，但**从未推送到远端**，
+> 因此**没有泄漏到公网**。本节早前写作"泄露的 API 密钥"属于措辞过头——
+> **"进入版本库"不等于"已公开"**，两者必须分开表述。
 
-DeepSeek 与 DashScope（阿里云）两把密钥仍以明文存在于两个本地 ref（均指向 `8eb3943`）；
-同一把 DashScope 密钥亦以明文存在于未跟踪的 `.env`（`.gitignore:21`，从未入库）。
+远端为公开仓库（GitHub API `private: false`）。逐项核实：
+
+| 核查项 | 结果 |
+|---|---|
+| `git log origin/develop / origin/main / origin/develop_excel -S <key>` | 全部 **0 命中** |
+| 含密钥的提交 `952995a` 是否在任一 `origin/*` 上 | **否**（`merge-base --is-ancestor` 全为假） |
+| 旧链头 `8eb3943` 是否存在于 GitHub | **否**（GitHub API 返回 422） |
+| `.env` 是否曾被提交 | **否**（`git log --all -- .env` 为空） |
+| fork 数 / tag 数 | **0 / 0** |
+
+已执行的清除：脱敏 `PROJECT_HISTORY.md`；把 `0aa40ae`+`f05756b` 压成 `98b552d`（前者新增、
+后者又全删的纯噪声对）；删除 `backup-before-secret-purge` 与 `refs/original/refs/heads/develop`；
+`reflog expire --expire=now --all` + `gc --prune=now`（`.git` **40 MB → 3.1 MB**）。
+清除后：`git log --all -S <key>` 为空、`git cat-file -e 952995a` 报对象不存在、`git fsck --full` 无错。
+
+**为什么仍然建议轮换**（紧迫性：尽快，而非"已泄露、立刻"）：
+
+1. **GitHub 会长期保留被 force-push 抹掉的提交。** 实测本仓库 `c97ec0a`
+   （2026-03-11 的旧 main 头，已被强制更新替换、不再是任何分支的祖先）
+   **仍可通过 API 按 SHA 访问（HTTP 200）**。即"从远端删掉"≠"从公网删掉"——
+   这正是"改写历史不能 un-leak"的具体机制。（该提交已查，**0 命中**密钥。）
+2. 密钥当时确实躺在**一个 `push --all` 就会公开**的位置（本地分支 + 备份 ref）。
+3. 同一把 DashScope 密钥还明文存在于 `.env`；`.env` 不经 git 泄漏，但项目打包/分享/传云盘时易被带出。
+4. 凭据一旦写入版本库，业界惯例即视为已泄露并轮换——轮换成本几秒，判断错误的代价是账单与资源滥用。
+
+**待办（仅剩人工动作）**：到 DeepSeek / 阿里云控制台吊销并重建密钥，然后更新 `.env`。
 
 > 本节刻意**不写出密钥前缀**——风险清单本身不应成为新的泄露载体。
 > 需要定位时按 ref 名与 `8eb3943` 查即可，不必依赖密钥字面量。
-
-- **后果**：额度被消耗、产生实际账单；若该阿里云密钥同时具备其他服务权限，可能升级为资源滥用。
-- **为什么历史重写不够**：重写只能让**未来的** clone 拿不到密钥，**无法 un-leak 已经泄露的值**。
-  **轮换是唯一有效补救。**
-- **修复**：① 到 DeepSeek / 阿里云控制台吊销并重建密钥；② `git branch -D backup-before-secret-purge`
-  与 `git update-ref -d refs/original/refs/heads/develop`；③ `git reflog expire --expire=now --all && git gc --prune=now`。
 
 ### P1 —— 高优先级
 
