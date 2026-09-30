@@ -98,6 +98,74 @@ button:disabled {
   outline: none;
 }
 
+/* ---------- Windows 98 经典滚动条 ---------- */
+/* scrollbar-color 会让 Chromium 放弃 ::-webkit-scrollbar 而改用原生滚动条，
+   因此只在没有 webkit 伪元素的浏览器（Firefox）里退化为纯灰配色。 */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: #c0c0c0 #dfdfdf;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+/* 凹槽：2×2 点阵底纹 */
+::-webkit-scrollbar-track {
+  background-color: #dfdfdf;
+  background-image: linear-gradient(45deg, #ffffff 25%, transparent 25%, transparent 75%, #ffffff 75%),
+    linear-gradient(45deg, #ffffff 25%, transparent 25%, transparent 75%, #ffffff 75%);
+  background-size: 2px 2px;
+  background-position: 0 0, 1px 1px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: #dfdfdf;
+}
+
+::-webkit-scrollbar-button {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: url("/icons/arrow-up.svg");
+}
+
+::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: url("/icons/arrow-down.svg");
+}
+
+::-webkit-scrollbar-button:horizontal:start:decrement {
+  background-image: url("/icons/arrow-left.svg");
+}
+
+::-webkit-scrollbar-button:horizontal:end:increment {
+  background-image: url("/icons/arrow-right.svg");
+}
+
+/* 只保留单向按钮，与 Windows 98 的单组箭头一致。 */
+::-webkit-scrollbar-button:vertical:start:increment,
+::-webkit-scrollbar-button:vertical:end:decrement,
+::-webkit-scrollbar-button:horizontal:start:increment,
+::-webkit-scrollbar-button:horizontal:end:decrement {
+  display: none;
+}
+
 /* 等宽数字：数值列纵向对齐，避免刷新时数字宽度跳动。 */
 .num,
 .score,
