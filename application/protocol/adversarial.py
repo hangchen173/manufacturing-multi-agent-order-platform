@@ -52,14 +52,37 @@ def next_action(
     return AdversarialOutcome.DISPUTED
 
 
-def build_counter_evidence_feedback(challenges: List[AgentMessage]) -> str:
+#: 反馈媒介。线上只使用 "locator"；"natural_language" 仅供新颖性判决实验的对照臂。
+FEEDBACK_MODES = ("locator", "natural_language")
+
+
+def build_counter_evidence_feedback(
+    challenges: List[AgentMessage],
+    *,
+    mode: str = "locator",
+) -> str:
     """把挑战的反证整理成可回灌给生产者的反馈。
 
-    只回灌**可复现的证据**（locator + 反证值），不回灌验证者的措辞，
-    避免生产者被自然语言说服而放弃对原文的核对。
+    `mode="locator"`（默认，即线上行为）
+        只回灌**可复现的证据**（locator + 反证值），不回灌验证者的措辞，
+        避免生产者被自然语言说服而放弃对原文的核对。
+
+    `mode="natural_language"`
+        只回灌「哪一项的哪个字段不一致」这一层措辞，**剔除**单元格坐标、
+        工作表名与原文真实值。它与 locator 模式的唯一差异就是反证媒介，
+        因此两臂构成单变量对照（见 paper/06_NOVELTY_EXPERIMENT.md）。
+
+    两种模式共用同一条消息列表，且 locator 模式与加入 mode 之前逐字节相同，
+    所以 `paper-v1-baseline` 的语义不受影响。
     """
+    if mode not in FEEDBACK_MODES:
+        raise ValueError(f"未知的反馈模式 {mode!r}，可选 {FEEDBACK_MODES}")
+
     lines: List[str] = []
     for message in challenges:
+        if mode == "natural_language":
+            lines.append(f"- {_natural_language_reason(message)}")
+            continue
         reason = message.payload.get("reason") or "未说明理由"
         lines.append(f"- {reason}")
         for evidence in message.evidence:
@@ -71,6 +94,23 @@ def build_counter_evidence_feedback(challenges: List[AgentMessage]) -> str:
                 f"  · 反证位置 {position}：原文为 {evidence.value!r}"
             )
     return "\n".join(lines)
+
+
+def _natural_language_reason(message: AgentMessage) -> str:
+    """把一条挑战改写成不含定位符与原文值的自然语言措辞。
+
+    只保留「哪一项的哪个字段与原文不一致」——这正是纯自然语言对抗协议
+    所能提供的全部信息。`item_index` 指向的是**主张列表**而不是源文档坐标，
+    不构成 locator；工作表名、行列号与原文真实值一律不出现在输出中。
+    """
+    subject = message.subject or {}
+    field = subject.get("field") or (message.payload or {}).get("field")
+    item_index = subject.get("item_index")
+    if item_index is not None and field:
+        return f"第 {item_index + 1} 项的 {field} 与原文不一致，请重新核对原订单。"
+    if field:
+        return f"{field} 与原文不一致，请重新核对原订单。"
+    return "上一次抽取结果与原文存在不一致，请重新核对原订单。"
 
 
 def _describe_locator(locator: Dict[str, Any]) -> str:

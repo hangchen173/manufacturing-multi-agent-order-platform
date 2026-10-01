@@ -1,5 +1,6 @@
 from application.protocol.adversarial import (
     AdversarialOutcome,
+    FEEDBACK_MODES,
     build_counter_evidence_feedback,
     challenge_evidence,
     classify_verifier_response,
@@ -17,6 +18,7 @@ from application.protocol.budget import Budget, BudgetExhausted, RetryBudget
 
 __all__ = [
     "AdversarialOutcome",
+    "FEEDBACK_MODES",
     "build_counter_evidence_feedback",
     "challenge_evidence",
     "classify_verifier_response",
