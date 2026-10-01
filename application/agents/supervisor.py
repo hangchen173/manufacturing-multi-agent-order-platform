@@ -116,6 +116,7 @@ class Supervisor:
                 "message": "订单处理完成",
                 "usage": self._usage(board),
                 "diagnostics": diagnostics,
+                "evidence_chain": parse_state.get("evidence_chain") or [],
                 "blackboard": board,
                 "task_graph": graph,
             }
@@ -215,7 +216,8 @@ class Supervisor:
         if not regions:
             return {"items": [], "order_facts": {}, "regions": [], "document_type": document_type,
                     "challenges": [], "parsing_issues": [], "attempts": 0,
-                    "verifications": [], "model_calls": [], "item_regions": []}
+                    "verifications": [], "evidence_chain": [], "model_calls": [],
+                    "item_regions": []}
 
         items, order_facts, item_regions = self._extract_and_verify(
             board, graph, budget, regions, image_path, image_type, scout_task.task_id,
@@ -243,6 +245,7 @@ class Supervisor:
         item_regions: List[int] = []
         challenges: List[AgentMessage] = []
         verifications: List[Dict[str, Any]] = []
+        evidence_chain: List[Dict[str, Any]] = []
 
         while attempts < MAX_EXTRACTION_ATTEMPTS:
             attempts += 1
@@ -258,7 +261,9 @@ class Supervisor:
             extract_messages = self._publish(board, self._run_group(extract_tasks, budget))
             items, order_facts, item_regions = self._collect_extraction(extract_messages, regions)
 
-            challenges, verifications = self._verify(board, graph, budget, items, item_regions)
+            challenges, verifications, evidence_chain = self._verify(
+                board, graph, budget, items, item_regions,
+            )
             if not challenges:
                 break
             feedback = build_counter_evidence_feedback(challenges)
@@ -266,11 +271,13 @@ class Supervisor:
         parsing_issues = self._parsing_issues(challenges)
         board.set_control("parsing_issues", parsing_issues)
         board.set_control("extraction_attempts", attempts)
+        board.set_control("evidence_chain", evidence_chain)
         board.set_control("parse_state", {
             "attempts": attempts,
             "challenges": [self._challenge_reason(message) for message in challenges],
             "parsing_issues": parsing_issues,
             "verifications": verifications,
+            "evidence_chain": evidence_chain,
             "self_correction": {
                 "attempts": attempts,
                 "resolved": not challenges,
@@ -329,7 +336,7 @@ class Supervisor:
 
     def _verify(self, board: Blackboard, graph: TaskGraph, budget: Budget,
                 items: List[Dict[str, Any]], item_regions: List[int]
-                ) -> Tuple[List[AgentMessage], List[Dict[str, Any]]]:
+                ) -> Tuple[List[AgentMessage], List[Dict[str, Any]], List[Dict[str, Any]]]:
         regions = board.control("regions") or []
         tasks = [
             graph.add(Task(
@@ -358,7 +365,31 @@ class Supervisor:
             for message in messages
             if message.sender == AgentRole.GROUNDING_VERIFIER.value
         ]
-        return challenges, verifications
+        return challenges, verifications, self._evidence_chain(messages)
+
+    @staticmethod
+    def _evidence_chain(messages: List[AgentMessage]) -> List[Dict[str, Any]]:
+        """把验证者发出的**全部证据**（含接受时的正向证据）扁平化为可落盘的证据链。
+
+        一条 ``(locator, value, verdict)`` 就是一次可被第三方在不调用任何模型的
+        前提下复核的比对。这是产物层审计可复现性的来源。
+        """
+        chain: List[Dict[str, Any]] = []
+        for message in messages:
+            if message.sender != AgentRole.GROUNDING_VERIFIER.value:
+                continue
+            verdict = ("challenge" if message.performative == Performative.CHALLENGE
+                       else message.performative.value)
+            fields = (message.payload or {}).get("checked_fields") or []
+            for position, evidence in enumerate(message.evidence):
+                entry = evidence.model_dump(mode="json")
+                entry["verdict"] = verdict
+                entry["item_index"] = message.subject.get("item_index")
+                entry["field"] = message.subject.get("field") or (
+                    fields[position] if position < len(fields) else None
+                )
+                chain.append(entry)
+        return chain
 
     @staticmethod
     def _challenge_reason(message: AgentMessage) -> Dict[str, Any]:
@@ -499,9 +530,38 @@ class Supervisor:
                 "severity": "high",
             })
 
+        self._attach_issue_locators(issues, parse_state.get("evidence_chain") or [])
         board.set_control("risk_issues", issues)
         self._persist(board, graph)
         return {"issues": issues, "grounding": grounding}
+
+    @staticmethod
+    def _attach_issue_locators(issues: List[Dict[str, Any]],
+                               evidence_chain: List[Dict[str, Any]]) -> None:
+        """给风控问题补上明细行的定位符，使第三方能直接找到被质疑的那一行。
+
+        只补 ``item_index`` 已知、且证据链里确实存在该行单元格定位的问题；
+        没有定位就不补——宁可缺，也不给出错误的定位。
+        """
+        row_locators: Dict[int, Dict[str, Any]] = {}
+        for entry in evidence_chain:
+            locator = entry.get("locator") or {}
+            if locator.get("kind") != "cell":
+                continue
+            index = entry.get("item_index")
+            if index is None or index in row_locators:
+                continue
+            row_locators[index] = {
+                "kind": "cell",
+                "sheet": locator.get("sheet"),
+                "row": locator.get("row"),
+            }
+        for issue in issues:
+            if issue.get("locator"):
+                continue
+            locator = row_locators.get(issue.get("item_index"))
+            if locator:
+                issue["locator"] = dict(locator)
 
     @staticmethod
     def _grounding_by_item(parse_state: Dict[str, Any],

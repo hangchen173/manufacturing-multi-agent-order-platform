@@ -117,20 +117,38 @@ def audit_order(path: Path, loader: DocumentLoader) -> Optional[Dict[str, Any]]:
 
 # --------------------------------------------------------------------- C2b 审计缺口
 
-def audit_artifacts(results_root: Path) -> Dict[str, Any]:
-    """扫描既有运行产物，看**证据链**有没有被落盘。
+def _evidence_chain_of(row: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """取出一条记录里落盘的证据链（兼容顶层与 ``prediction`` 内两处）。"""
+    chain = row.get("evidence_chain")
+    if not chain:
+        chain = (row.get("prediction") or {}).get("evidence_chain")
+    return chain or []
 
-    一条驳回要能被第三方复现，产物里必须存在机器可核查的证据（locator + 原文值）。
-    本函数统计：有多少记录带了这种证据，多少条问题描述只是自然语言。
+
+def audit_artifacts(results_root: Path, loader: Optional[DocumentLoader] = None
+                    ) -> Dict[str, Any]:
+    """扫描既有运行产物，看**证据链**有没有被落盘、落盘的证据能不能被复算。
+
+    两个指标：
+
+    - **记录级覆盖率**：多少条记录带了机器可核查的证据链。
+    - **可核查字段覆盖率**：落盘的证据里，有多少条能由第三方按 ``ρ(ℓ, D)``
+      重新寻址并取回与证据一致的值（**不调用任何模型**）。
+
+    后者是 C2b 的主指标——它度量的是「通过这一结论本身能不能被复核」。
     """
     records = 0
     with_evidence_chain = 0
     issues_total = 0
     issues_with_locator = 0
+    entries_total = 0
+    entries_resolved = 0
     runs = []
+    ir_cache: Dict[str, Optional[Dict[str, Any]]] = {}
 
     for predictions in sorted(results_root.glob("*/predictions.jsonl")):
         run_records = run_with_chain = run_issues = run_issues_with_locator = 0
+        run_entries = run_resolved = 0
         for line in predictions.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
@@ -140,22 +158,46 @@ def audit_artifacts(results_root: Path) -> Dict[str, Any]:
                 continue
             run_records += 1
             final = (row.get("prediction") or {}).get("final_result") or {}
-            if _has_evidence_chain(final):
+            chain = _evidence_chain_of(row)
+            if _has_evidence_chain(final, chain):
                 run_with_chain += 1
             for issue in (final.get("risk_result") or {}).get("issues") or []:
                 run_issues += 1
                 if issue.get("locator"):
                     run_issues_with_locator += 1
+
+            document_ir = _document_ir(ir_cache, loader, row.get("file_path"))
+            for entry in chain:
+                locator = entry.get("locator") or {}
+                if locator.get("kind") != "cell":
+                    continue
+                run_entries += 1
+                if document_ir is None:
+                    continue
+                resolved = resolve_locator(document_ir, locator)
+                if GroundingVerifier._cell_matches(
+                    entry.get("field"), resolved, entry.get("value"),
+                ):
+                    run_resolved += 1
+
         records += run_records
         with_evidence_chain += run_with_chain
         issues_total += run_issues
         issues_with_locator += run_issues_with_locator
+        entries_total += run_entries
+        entries_resolved += run_resolved
         runs.append({
             "run": predictions.parent.name,
             "records": run_records,
             "records_with_evidence_chain": run_with_chain,
+            "record_coverage": round(run_with_chain / run_records, 4) if run_records else 0.0,
             "issues": run_issues,
             "issues_with_locator": run_issues_with_locator,
+            "evidence_entries": run_entries,
+            "evidence_resolved": run_resolved,
+            "verifiable_field_coverage": (
+                round(run_resolved / run_entries, 4) if run_entries else 0.0
+            ),
         })
 
     return {
@@ -164,11 +206,31 @@ def audit_artifacts(results_root: Path) -> Dict[str, Any]:
         "records_with_evidence_chain": with_evidence_chain,
         "issues": issues_total,
         "issues_with_locator": issues_with_locator,
+        "evidence_entries": entries_total,
+        "evidence_resolved": entries_resolved,
     }
 
 
-def _has_evidence_chain(final_result: Dict[str, Any]) -> bool:
+def _document_ir(cache: Dict[str, Optional[Dict[str, Any]]],
+                 loader: Optional[DocumentLoader], file_path: Optional[str]
+                 ) -> Optional[Dict[str, Any]]:
+    """按记录里的文件路径载入文档 IR；只为 Excel 复算定位符，其余返回 None。"""
+    if loader is None or not file_path:
+        return None
+    if file_path not in cache:
+        try:
+            document_ir, document_type = loader.load_ir(file_path)
+            cache[file_path] = document_ir if document_type == "excel" else None
+        except Exception:  # noqa: BLE001 - 缺文件/坏文件不应中断审计
+            cache[file_path] = None
+    return cache[file_path]
+
+
+def _has_evidence_chain(final_result: Dict[str, Any],
+                        chain: Optional[List[Dict[str, Any]]] = None) -> bool:
     """产物里是否留下了可机器核查的证据（而非只有最终值）。"""
+    if chain:
+        return True
     if final_result.get("evidence") or final_result.get("messages"):
         return True
     for issue in (final_result.get("risk_result") or {}).get("issues") or []:
@@ -201,7 +263,7 @@ def build_report(orders: List[Dict[str, Any]], artifacts: Dict[str, Any]) -> Dic
         "c2b_audit_gap": {
             "records": artifacts["records"],
             "records_with_evidence_chain": artifacts["records_with_evidence_chain"],
-            "audit_reproducibility": (
+            "record_coverage": (
                 round(artifacts["records_with_evidence_chain"] / artifacts["records"], 4)
                 if artifacts["records"] else 0.0
             ),
@@ -210,6 +272,12 @@ def build_report(orders: List[Dict[str, Any]], artifacts: Dict[str, Any]) -> Dic
             "issue_verifiability": (
                 round(artifacts["issues_with_locator"] / artifacts["issues"], 4)
                 if artifacts["issues"] else 0.0
+            ),
+            "evidence_entries": artifacts["evidence_entries"],
+            "evidence_resolved": artifacts["evidence_resolved"],
+            "verifiable_field_coverage": (
+                round(artifacts["evidence_resolved"] / artifacts["evidence_entries"], 4)
+                if artifacts["evidence_entries"] else 0.0
             ),
         },
         "runs": artifacts["runs"],
@@ -233,23 +301,28 @@ def render_markdown(report: Dict[str, Any]) -> str:
         f"- 定位符解析成功率：{a['evidence_resolved']}/{a['claims_checked']} "
         f"= **{a['evidence_resolution_rate']}**",
         "",
-        "## C2b 审计可复现性缺口",
+        "## C2b 可核查性缺口",
         "",
         f"- 历史运行记录：**{b['records']}** 条",
         f"- 带机器可核查证据链的：**{b['records_with_evidence_chain']}** 条",
-        f"- **审计可复现性：{b['audit_reproducibility']}**",
+        f"- **记录级覆盖率：{b['record_coverage']}**",
+        f"- 落盘证据条目：**{b['evidence_entries']}** 条",
+        f"- 其中按 ρ(ℓ,D) 复算一致的：**{b['evidence_resolved']}** 条",
+        f"- **可核查字段覆盖率：{b['verifiable_field_coverage']}** ★ 主指标",
         f"- 问题描述：**{b['issues']}** 条，其中带定位符的 **{b['issues_with_locator']}** 条",
         f"- **问题可核查率：{b['issue_verifiability']}**",
         "",
         "## 各运行明细",
         "",
-        "| 运行 | 记录 | 带证据链 | 问题 | 带定位符 |",
-        "|---|---|---|---|---|",
+        "| 运行 | 记录 | 带证据链 | 记录覆盖率 | 问题 | 带定位符 | 证据条目 | 复算一致 | 字段覆盖率 |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for run in report["runs"]:
         lines.append(
             f"| {run['run']} | {run['records']} | {run['records_with_evidence_chain']} "
-            f"| {run['issues']} | {run['issues_with_locator']} |"
+            f"| {run['record_coverage']} | {run['issues']} | {run['issues_with_locator']} "
+            f"| {run['evidence_entries']} | {run['evidence_resolved']} "
+            f"| {run['verifiable_field_coverage']} |"
         )
     return "\n".join(lines) + "\n"
 
@@ -277,7 +350,7 @@ def main() -> int:
             orders.append(record)
 
     print(f"[产物] 扫描 {RESULTS_ROOT} 下的历史运行…", file=sys.stderr)
-    artifacts = audit_artifacts(RESULTS_ROOT)
+    artifacts = audit_artifacts(RESULTS_ROOT, loader)
 
     report = build_report(orders, artifacts)
 

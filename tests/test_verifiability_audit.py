@@ -180,25 +180,31 @@ class ReportTests(unittest.TestCase):
     def test_report_rates_are_ratios_not_percentages(self):
         orders = [{"region_cells": 300, "claims_checked": 10, "evidence_resolved": 10}]
         artifacts = {"runs": [], "records": 100, "records_with_evidence_chain": 0,
-                     "issues": 50, "issues_with_locator": 0}
+                     "issues": 50, "issues_with_locator": 0,
+                     "evidence_entries": 40, "evidence_resolved": 40}
 
         report = audit.build_report(orders, artifacts)
 
         self.assertEqual(report["c2a_verification_cost"]["cost_ratio"], 300)
-        self.assertEqual(report["c2b_audit_gap"]["audit_reproducibility"], 0.0)
+        self.assertEqual(report["c2b_audit_gap"]["record_coverage"], 0.0)
         self.assertEqual(report["c2b_audit_gap"]["issue_verifiability"], 0.0)
+        self.assertEqual(report["c2b_audit_gap"]["verifiable_field_coverage"], 1.0)
 
     def test_markdown_renders_both_sections(self):
         orders = [{"region_cells": 300, "claims_checked": 10, "evidence_resolved": 10}]
         artifacts = {"runs": [{"run": "r", "records": 1, "records_with_evidence_chain": 0,
-                               "issues": 0, "issues_with_locator": 0}],
+                               "record_coverage": 0.0, "issues": 0, "issues_with_locator": 0,
+                               "evidence_entries": 0, "evidence_resolved": 0,
+                               "verifiable_field_coverage": 0.0}],
                      "records": 1, "records_with_evidence_chain": 0,
-                     "issues": 0, "issues_with_locator": 0}
+                     "issues": 0, "issues_with_locator": 0,
+                     "evidence_entries": 0, "evidence_resolved": 0}
 
         markdown = audit.render_markdown(audit.build_report(orders, artifacts))
 
         self.assertIn("C2a 核查成本", markdown)
-        self.assertIn("C2b 审计可复现性缺口", markdown)
+        self.assertIn("C2b 可核查性缺口", markdown)
+        self.assertIn("可核查字段覆盖率", markdown)
 
 
 if __name__ == "__main__":

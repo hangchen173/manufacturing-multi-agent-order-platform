@@ -212,6 +212,7 @@ class OrderProcessingOrchestrator:
             "usage": dict(self._last_usage),
             "diagnostics": self._diagnostics(order),
             "reason_chain": verdict.get("reason_chain") or [],
+            "evidence_chain": result.get("evidence_chain") or [],
         }
 
     # ------------------------------------------------------------------ helpers

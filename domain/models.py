@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from enum import Enum
 import math
 
@@ -89,6 +89,10 @@ class RiskIssue(BaseModel):
     issue_type: str = Field(description="问题类型")
     description: str = Field(description="问题描述")
     severity: str = Field(description="严重程度")
+    #: 可复现的定位信息。没有可靠定位时为 None——宁可缺，也不给错误定位。
+    locator: Optional[Dict[str, Any]] = Field(
+        None, description="问题所在的源文档定位，第三方可用它复现该问题"
+    )
 
 class RiskCheckResult(BaseModel):
     needs_confirmation: bool = Field(description="是否需要人工确认")

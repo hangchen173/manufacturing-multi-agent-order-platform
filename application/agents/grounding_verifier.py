@@ -52,14 +52,18 @@ class GroundingVerifier(CollaborativeAgent):
 
         claim = claims[-1]
         value = claim.get("value") or {}
-        problems = self._verify_item(document_ir, index, value, region)
+        problems, checked = self._verify_item(document_ir, index, value, region)
 
         if not problems:
             return [self.emit(
                 task,
                 Performative.INFORM,
-                subject={"claim_subject": f"item[{index}]"},
-                payload={"verified": True, "item_index": index},
+                subject={"claim_subject": f"item[{index}]", "item_index": index},
+                payload={"verified": True, "item_index": index,
+                         "checked_fields": [entry["field"] for entry in checked]},
+                evidence=[
+                    self._checked_evidence(document_ir, index, entry) for entry in checked
+                ],
                 in_reply_to=claim.get("message_id"),
             )]
 
@@ -78,8 +82,16 @@ class GroundingVerifier(CollaborativeAgent):
 
     # ------------------------------------------------------------------ item level
     def _verify_item(self, document_ir: Dict[str, Any], index: int, value: Dict[str, Any],
-                     region: Optional[Dict[str, Any]]) -> List[Tuple[str, str, List[Evidence]]]:
+                     region: Optional[Dict[str, Any]]
+                     ) -> Tuple[List[Tuple[str, str, List[Evidence]]], List[Dict[str, Any]]]:
+        """返回 ``(problems, checked)``。
+
+        ``checked`` 是**全部被比对的字段**（含通过与否），每条都带上可复现的
+        ``(locator, 原文值)``。验证者在接受一条主张时同样外化这些证据，
+        使「通过」本身可被第三方复核——这是产物层审计可复现性的来源。
+        """
         problems: List[Tuple[str, str, List[Evidence]]] = []
+        checked: List[Dict[str, Any]] = []
 
         name = (value.get("material_name") or "").strip()
         if not name:
@@ -92,26 +104,60 @@ class GroundingVerifier(CollaborativeAgent):
 
         locators = find_item_locators(document_ir, region)
         if index < len(locators):
-            problems.extend(self._verify_against_cells(index, value, locators[index]))
+            cell_problems, cell_checked = self._verify_against_cells(index, value, locators[index])
+            problems.extend(cell_problems)
+            checked.extend(cell_checked)
         else:
-            problems.extend(self._verify_against_text(document_ir, index, value))
-        return problems
+            text_problems, text_checked = self._verify_against_text(document_ir, index, value)
+            problems.extend(text_problems)
+            checked.extend(text_checked)
+        return problems, checked
+
+    def _checked_evidence(self, document_ir: Dict[str, Any], index: int,
+                          entry: Dict[str, Any]) -> Evidence:
+        """把一条**已通过**的比对外化为可复现证据。
+
+        `reproducible` 不再由生产者自报：对单元格定位符，这里真的按
+        ``ρ(ℓ, D)`` 重新寻址一次并与证据值比对（补上待决事项 D16 的缺口）。
+        """
+        locator = entry["locator"]
+        source_value = entry["source_value"]
+        is_cell = locator.get("kind") == "cell"
+        reproducible = True
+        if is_cell:
+            resolved = cell_value(
+                document_ir, locator.get("sheet"), locator.get("row"), locator.get("column"),
+            )
+            reproducible = self._cell_matches(entry["field"], resolved, source_value)
+        return Evidence(
+            kind="cell_ref" if is_cell else "source_span",
+            locator=locator,
+            value=source_value,
+            reproducible=reproducible,
+            note=(f"item[{index}].{entry['field']} 主张 {entry['claimed_value']!r}，"
+                  f"原文为 {source_value!r}"),
+        )
 
     def _verify_against_cells(self, index: int, value: Dict[str, Any],
-                              locator: Dict[str, Any]) -> List[Tuple[str, str, List[Evidence]]]:
+                              locator: Dict[str, Any]
+                              ) -> Tuple[List[Tuple[str, str, List[Evidence]]], List[Dict[str, Any]]]:
         problems: List[Tuple[str, str, List[Evidence]]] = []
+        checked: List[Dict[str, Any]] = []
         columns = locator["columns"]
         source_values = locator["values"]
 
         for field, column in columns.items():
             expected = source_values.get(field)
             predicted = value.get(field)
+            locator_ref = {"kind": "cell", "sheet": locator["sheet"],
+                           "row": locator["row"], "column": column}
+            checked.append({"field": field, "locator": locator_ref,
+                            "source_value": expected, "claimed_value": predicted})
             if self._cell_matches(field, expected, predicted):
                 continue
             evidence = [Evidence(
                 kind="cell_ref",
-                locator={"kind": "cell", "sheet": locator["sheet"], "row": locator["row"],
-                         "column": column},
+                locator=dict(locator_ref),
                 value=expected,
                 reproducible=True,
                 note=f"item[{index}].{field} 主张 {predicted!r}，原文单元格为 {expected!r}",
@@ -122,7 +168,7 @@ class GroundingVerifier(CollaborativeAgent):
                  f"对应列不一致：原单元格为 {expected!r}，抽取为 {predicted!r}。"),
                 evidence,
             ))
-        return problems
+        return problems, checked
 
     @staticmethod
     def _cell_matches(field: str, expected: Any, predicted: Any) -> bool:
@@ -145,23 +191,33 @@ class GroundingVerifier(CollaborativeAgent):
         return normalize_text(str(expected)) == normalize_text(str(predicted or ""))
 
     def _verify_against_text(self, document_ir: Dict[str, Any], index: int,
-                             value: Dict[str, Any]) -> List[Tuple[str, str, List[Evidence]]]:
+                             value: Dict[str, Any]
+                             ) -> Tuple[List[Tuple[str, str, List[Evidence]]], List[Dict[str, Any]]]:
         source = self._plain_text(document_ir)
         if not source:
-            return []
+            return [], []
         normalized_source = normalize_text(source)
         problems: List[Tuple[str, str, List[Evidence]]] = []
+        checked: List[Dict[str, Any]] = []
         name = value.get("material_name") or ""
-        if normalize_text(name) and normalize_text(name) not in normalized_source:
-            problems.append((
-                "material_name",
-                f"第 {index + 1} 行物料名称「{name}」无法在原文中定位",
-                [Evidence(kind="source_span",
-                          locator={"kind": "span", "text": name},
-                          value=None, reproducible=True,
-                          note="该名称在原文中不存在")],
-            ))
-        return problems
+        if normalize_text(name):
+            if normalize_text(name) in normalized_source:
+                checked.append({
+                    "field": "material_name",
+                    "locator": {"kind": "span", "text": name},
+                    "source_value": name,
+                    "claimed_value": name,
+                })
+            else:
+                problems.append((
+                    "material_name",
+                    f"第 {index + 1} 行物料名称「{name}」无法在原文中定位",
+                    [Evidence(kind="source_span",
+                              locator={"kind": "span", "text": name},
+                              value=None, reproducible=True,
+                              note="该名称在原文中不存在")],
+                ))
+        return problems, checked
 
     @staticmethod
     def _plain_text(document_ir: Dict[str, Any]) -> str:

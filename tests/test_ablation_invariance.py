@@ -64,12 +64,17 @@ class IsolationAblationIsIdentityTests(unittest.TestCase):
             right = {"quantity": 100, "confidence_score": confidence}
 
             self.assertEqual(
-                len(self.verifier._verify_against_cells(0, wrong, locator)), 1,
+                len(self.verifier._verify_against_cells(0, wrong, locator)[0]), 1,
                 f"置信度 {confidence} 时错误值未被挑战——隔离消融将不再是恒等变换",
             )
             self.assertEqual(
-                len(self.verifier._verify_against_cells(0, right, locator)), 0,
+                len(self.verifier._verify_against_cells(0, right, locator)[0]), 0,
                 f"置信度 {confidence} 时正确值被误挑战",
+            )
+            # 正确值同样必须留下可复现的正向证据，否则「通过」不可被第三方复核
+            self.assertEqual(
+                len(self.verifier._verify_against_cells(0, right, locator)[1]), 1,
+                f"置信度 {confidence} 时正确值未外化证据链",
             )
 
     def test_verifier_never_references_confidence_or_rationale(self):
@@ -86,13 +91,14 @@ class IsolationAblationIsIdentityTests(unittest.TestCase):
         locator = _locator()
         value = {"quantity": 1000, "confidence_score": 0.99}
 
-        first = self.verifier._verify_against_cells(0, value, locator)
-        second = self.verifier._verify_against_cells(0, value, locator)
+        first, first_checked = self.verifier._verify_against_cells(0, value, locator)
+        second, second_checked = self.verifier._verify_against_cells(0, value, locator)
 
         self.assertEqual(
             [(field, reason) for field, reason, _ in first],
             [(field, reason) for field, reason, _ in second],
         )
+        self.assertEqual(first_checked, second_checked)
 
 
 class BudgetBreakerIsNeverTriggeredTests(unittest.TestCase):

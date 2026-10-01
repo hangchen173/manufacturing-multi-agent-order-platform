@@ -112,21 +112,126 @@
 > 缺口不在协议，在**持久化**。这是一个**可定位、可修复、且可度量**的工程缺口——
 > 比「我们的机制提升了 X%」更经得起审稿。
 
-### 2.4 修复方向（待实施，约 30 行）
+### 2.4 ⭐ 一个推翻原修复方案的新发现（2026-10-02）
 
-把证据链写入运行产物：
+原方案是「把**已经构造好**的证据落盘」。核对代码后发现它**不可行**：
 
-1. `application/protocol/adversarial.py` 的 `challenge_evidence()` 已产出
-   `Evidence(kind, locator, value)`，只需在落盘路径上带上它；
-2. `final_result` 增加 `evidence_chain` 字段：每条主张 → `(locator, value, verdict)`；
-3. `risk_result.issues[]` 增加 `locator`，把 `description` 从**唯一**说明降为**附注**。
+| # | 事实 | 代码 / 数据依据 |
+|---|---|---|
+| ① | **验证者只在驳回时外化证据**。`INFORM`（接受）只发 `{"verified": True, "item_index": i}`，**不携带 locator 与原文值** | `grounding_verifier.py:57-64` |
+| ② | **历史上验证者从未发起过一次挑战**。423 条记录中 `unresolved_parsing_problem` **0 条** | `evaluation/results/*/predictions.jsonl` 实测 |
+| ③ | 1,676 条问题**全部**来自 POLICY / SCHEDULE 风控规则（`price_abnormal` 761、`unknown_material` 300、`non_pack_quantity` 298 …），与文档溯源无关 | 同上 |
 
-**修复后可获得的实证**：审计可复现性 **0% → 100%**，且复现**不调用任何模型**
-（验证者是确定性纯函数，C1 已用可执行断言守卫）。
+**推论**：
 
-> ⚠️ **为什么现在还没做**：生产代码属于冻结基线 `paper-v1-baseline`（`a596bd6`），
-> 改动需重新打 tag（`paper-v2`）并说明「哪些实验基于哪个版本」。
-> 这是**必须显式决策**的事，见待决事项 **D21**。
+- 按原方案「把已有证据落盘」，落盘的是 **0 条**——**覆盖率仍为 0%**。
+- 更糟：C2b 原指标「**驳回**可复现率」的**分母是 0**（没有驳回可复现），指标本身失效。
+
+> **这不是坏消息，是更锋利的立论**：
+> 系统对**每一条被自动接受的字段**都在内部做了 $\rho(\ell,D)=v$ 的机器比对
+> （§1.3 的 23,528 条 100% 可解析，用的正是验证者内部的同一套 `find_item_locators`），
+> 但**既没有在消息层外化、也没有在产物层落盘**。
+> 于是「可核查性」在**协议层成立 → 消息层只对驳回成立（0 例）→ 产物层完全不成立**。
+
+### 2.5 D21 的重新界定（已决策：接受；**2026-10-02 已实现**）
+
+> ✅ **实现状态**：代码已落地，全量测试 **294 项通过 / 0 失败**，新增守卫测试
+> `tests/test_evidence_chain.py`（6 项）。版本 tag：**`paper-v2`**。
+
+**实际改动清单（与预估的对比）**：
+
+| # | 位置 | 改动 | 预估 | 实际 |
+|---|---|---|---|---|
+| 1 | `application/agents/grounding_verifier.py` | `_verify_against_cells` / `_verify_against_text` 除 `problems` 外返回 `checked`；新增 `_checked_evidence()`；`INFORM` 挂正向证据并在 subject 带上 `item_index` | ~35 | ✅ |
+| 2 | `application/agents/supervisor.py` | 新增 `_evidence_chain()` 汇总、`_attach_issue_locators()` 给风控问题补行定位；`run()` 返回 `evidence_chain` | ~15 | ✅ |
+| 3 | `application/orchestrators/order_processing.py` | 响应带出 `evidence_chain` | ~8 | ✅ |
+| 4 | `domain/models.py` | `RiskIssue` 新增可选 `locator` 字段（否则 pydantic 会把补上的定位符丢掉） | — | ✅ **新增，预估时漏掉** |
+| 5 | `scripts/verifiability_audit.py` | 指标改为「可核查字段覆盖率」，并对落盘证据**真的复算** $\rho(\ell,D)=v$ | ~15 | ✅ |
+| 6 | `tests/test_ablation_invariance.py`、`tests/test_verifiability_audit.py` | 随 API/指标变更同步 | — | ✅ |
+
+> **顺带真正关掉了 D16**：`_checked_evidence()` 里 `reproducible` **不再自报**——
+> 对单元格证据，它真的调 `cell_value()` 按 $\rho(\ell,D)$ 重新寻址一次再比对。
+> 论文定义与代码现在严格一致。
+
+因变量与实现方案同时修正：
+
+| | 原方案 | **修正后方案** |
+|---|---|---|
+| C2b 因变量 | 驳回可复现率（分母 0，不可用） | **可核查字段覆盖率** —— 无需调用模型即可复核的**已接受字段**占比 |
+| 实现 | 「把已有证据落盘」（产出 0 条） | **让验证者在接受时也外化它实际比对过的 `(locator, value)`**，再落盘 |
+| 改动量 | 约 30 行 | **约 60 行** |
+
+**改动清单（预估）**：
+
+| # | 位置 | 改动 | 行数 |
+|---|---|---|---|
+| 1 | `application/agents/grounding_verifier.py` | `_verify_against_cells()` 除 `problems` 外额外返回 `checked`：`(field, locator, source_value, claimed_value)`；`handle()` 在 `INFORM` 上挂这些 `Evidence` | ~35 |
+| 2 | `application/agents/supervisor.py` | 把 `checked` 汇总为 `evidence_chain`，写入 verdict；`issues[]` 补 `locator` | ~15 |
+| 3 | `application/orchestrators/order_processing.py` | 响应中带出 `evidence_chain`（不改 `FinalOrderResult` 领域模型，避免动持久化契约） | ~8 |
+| 4 | `scripts/verifiability_audit.py` | 指标改为「可核查字段覆盖率」，重测 | ~15 |
+
+> **为什么不动 `domain/models.py` 的 `FinalOrderResult`**：加字段会改变持久化契约与
+> 序列化测试面。把 `evidence_chain` 放在**编排器响应**层即可落入 `predictions.jsonl`
+> 的 `prediction` 字段（该字段已是全量 `result` 的 JSON 化），改动面最小。
+
+**增量成本：¥0 / 0 次额外模型调用。**
+
+> 关键：论文 MVP 本来就要把 E1 / E3 / E4 **全部重跑**（5 个基线 + 3 次重复）。
+> 证据链**随主实验重跑自然产出**，不需要为它单独跑一次。
+> 这是接受 D21 的决定性理由——它是**零边际成本**的。
+
+**版本口径（论文 Reproducibility 章必须写明）**：
+
+| 实验 | 基于版本 |
+|---|---|
+| G0 判决实验（50 次调用）、E7 核查成本、E8 的 **before** 测量 | `paper-v1-baseline`（`a596bd6`） |
+| E8 的 **after** 测量、E1 / E3 / E4 主实验 | **`paper-v2`**（新增 tag） |
+
+### 2.6 实测 before / after（2026-10-02 完成）
+
+**after 侧已由一次真实运行实测**（`d21_evidence_chain_v2_20261002_031140`，8 个订单，
+真实调用 `qwen3.7-plus`；产物 `predictions.jsonl`，审计复算**不调用模型**）：
+
+| 指标 | before（v1 · 423 条历史记录） | **after（v2 · 8 条新记录）** |
+|---|---|---|
+| **可核查字段覆盖率** ★ | **0.0000**（0 条证据） | **1.0000**（**985 / 985**） |
+| 记录级证据链覆盖率 | **0.0000**（0 / 423） | **1.0000**（**8 / 8**） |
+| 问题可核查率 | **0.0000**（0 / 1,676） | **1.0000**（**255 / 255**） |
+| 复现是否调用模型 | — | **否**（验证者为纯函数） |
+
+复现命令：
+
+```bash
+.venv/bin/python evaluation/run_evaluation.py \
+    --input-dir datasets/generated_complex/orders/test \
+    --annotation-dir datasets/generated_complex/annotations/test \
+    --limit 8 --dataset-name d21_evidence_chain_v2
+.venv/bin/python scripts/verifiability_audit.py \
+    --output-dir evaluation/results/verifiability_audit_20261002_d21_after
+```
+
+> ⚠️ **论文写作时必须写清的三条限定**（否则会被审稿人抓）：
+> 1. **after 侧目前只有 8 个订单**。正式数字应来自阶段 4 的主实验重跑（240 单 × 3 重复）。
+>    现在的 8 单是**机制已通的证明**，不是最终样本量。
+> 2. **审计脚本的聚合值会把 v1 与 v2 混在一起**（当前 431 条 → 记录级覆盖率 0.0186）。
+>    论文里必须**按运行分别报告**，不能用聚合值。
+> 3. 若全量重跑后覆盖率低于 100%（例如某些 PDF 取不到单元格定位），**如实报告并解释**——
+>    「91% + 诚实的失败分析」比一个站不住的 100% 更有说服力。
+
+### 2.7 修复前必须先回答的一个审稿质疑
+
+> 「你的验证者在 240 个订单上**一个错都没抓到**，那这套对抗协议到底起了什么作用？」
+
+**这是必须正面写的 Limitations**，不能回避。建议表述：
+
+> 「在我们的数据集上，基座模型的字段抽取准确率为 0.998+（29,410 个字段仅 57 处错误），
+> 验证者因此未产生任何挑战。**我们如实报告这一零检出结果。**
+> 本协议的价值在此条件下体现为：它为每一个被自动接受的字段留下了
+> 可被第三方**在不调用任何模型的前提下**复核的坐标（§2.5），
+> 从而使『通过』本身成为可审计的结论，而非模型的自我声明。」
+
+> **诚实性红线**：不得把「0 检出」包装成「0 逃逸」以外的任何正面指标——
+> 「0 逃逸」在 0 检出的前提下是**空洞的**，审稿人会立刻看穿。
 
 ---
 

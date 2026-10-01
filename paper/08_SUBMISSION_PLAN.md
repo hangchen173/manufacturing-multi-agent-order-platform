@@ -10,14 +10,15 @@
 
 | 项 | 结论 |
 |---|---|
-| **主投目标** | **PAKDD 2027**（CCF-C，ICORE B）— **LLM & Agentic AI 专轨** |
-| **截稿** | 2026-11-20（官网待二次核实；另一来源显示 2026-11-21 19:59 北京时间） |
+| **主投目标** | **PAKDD 2027**（CCF-C）— **Special Track on LLM and Agentic AI** ✅ 已确认（2026-10-02） |
+| **截稿** | **2026-11-20（周五）23:59 AoE** ✅ **官网已核实**（= 北京时间 11-21 19:59） |
 | **距今** | **49 天** |
 | **内部硬截止** | **2026-11-16**（周一），留 4 天缓冲 |
 | **备投目标** | IJCNN 2027（2027-01-31）→ ICDAR 2027（2027-02-20） |
 | **为什么是 PAKDD** | 它是**唯一截稿落在初试（12-19/20）之前**的候选；通知日 2027-02-26 正好卡在复试前 |
 | **最大风险** | 49 天从零写完一篇会议论文；**必须砍范围**，见 §4 |
 | **决策门** | **10-25 前若 G0 判决不通过或基线骨架跑不通，立即转 IJCNN（多 81 天）** |
+| **新增风险（10-02）** | **Camera-ready 2027-03-19 落在复试期**；且官网写明「**exclusively in person**」，到会为硬支出 |
 
 ---
 
@@ -39,9 +40,28 @@
 `callforpaper.org/cfp/call-for-papers-pakdd-2027`、`mldeadlines.com/conference/icdar-2027`、
 `mldeadlines.com/conference/ijcnn-2027`。检索日期 2026-10-02。
 
-> ⚠️ **必须二次核实**（PAKDD 官网 `pakdd2027.org`）：
-> ① 截稿精确到分钟的时区；② **页数上限**；③ 是否强制双盲；④ LLM & Agentic AI 专轨是否与主轨同截稿；
-> ⑤ 是否允许 arXiv 预印本。
+### 1.1 ✅ 官网二次核实结果（2026-10-02，D14 部分关闭）
+
+来源：`pakdd2027.org/pages/calls/research`、`/pages/dates`、`/pages/calls/llm-agentic`（官网原文）。
+
+| 待核项 | 核实结果 | 状态 |
+|---|---|---|
+| ① 截稿精确到分钟的时区 | **2026-11-20 23:59 AoE**（Anywhere on Earth） | ✅ |
+| ② **页数上限** | 官网原文：「The page limit and the submission site are **still being confirmed**」 | ⏳ **仍未公布** |
+| ③ 是否强制双盲 | **是**（"will be reviewed double-blind"），Springer LNCS 模板 | ✅ |
+| ④ 专轨是否与主轨同截稿 | **是**。Research / Applied Data Science / Survey / **LLM & Agentic AI** 四轨同截稿；专轨论文与主轨**同入 Springer 论文集** | ✅ |
+| ⑤ 是否允许 arXiv 预印本 | CFP **未提及** | ⚠️ 按「投稿前不主动公开」保守处理 |
+| ⑥（新增）现场要求 | **「PAKDD 2027 will be held exclusively in person. All accepted presentations must be delivered on-site.」** | ✅ 强制现场 |
+| ⑦（新增）Camera-ready | **2027-03-19 23:59 AoE** | ✅ ⚠️ **落在复试期** |
+| ⑧（新增）投稿系统 | 尚未公布 | ⏳ |
+
+> **行动项**：页数与投稿系统两项官网明确「to be published here once settled」。
+> **10-20 与 11-10 各复查一次官网**；在公布前按 **LNCS 12 页** 写作（若最终为 10 页，删 Discussion 压缩即可）。
+
+> ⭐ **附带的决定性发现**：专轨 CFP 的 topic list 与本文三条贡献**逐条对应**
+> （*auditability of agent-generated analyses* / *factual grounding* / *evidence gathering* /
+> *cost, latency of agentic workflows* / *multi-agent orchestration for data science*）。
+> 详见 `01_CONFIG.md` §5.3。写作时**直接引用 CFP 措辞**定位本文。
 
 ---
 
@@ -102,10 +122,11 @@
 
 | 日期 | 动作 | 产出 | 阻塞关系 |
 |---|---|---|---|
-| 10-02 | 确认 D1/D2/D3（本文件 §2） | `02_DECISIONS.md` 填表 | **阻塞全部后续** |
+| ~~10-02~~ | ✅ **确认 D1/D2/D3**（本文件 §2） | `02_DECISIONS.md` 已回填 | **阻塞项已解除** |
 | 10-02 | 决策 D13（Arm A 是否保留项号） | 同上 | 阻塞 A4 |
-| 10-03 | 核实 PAKDD 官网 CFP（页数/模板/双盲/专轨/arXiv） | 填 `01_CONFIG.md` | 阻塞写作格式 |
-| 10-04 | 注册 Springer LNCS 模板 + 投稿系统账号 | 本地可编译的 LaTeX 骨架 | 阻塞阶段 5 |
+| 10-02 | ✅ **核实 PAKDD 官网 CFP 6 项** | `01_CONFIG.md` §5 | ⏳ **仅剩页数 / 投稿系统待官网公布**（10-20、11-10 复查） |
+| 10-03 | **实现 D21 证据链落盘**（约 60 行）+ 打 tag `paper-v2` | `13_VERIFIABILITY_EXPERIMENTS.md` §2.5 | 阻塞 E8 的 after 测量 |
+| 10-04 | 下载 Springer LNCS 模板，建可编译 LaTeX 骨架（投稿系统待公布，账号延后） | 本地可编译的 LaTeX 骨架 | 阻塞阶段 5 |
 
 ### 阶段 1｜G0 判决实验（10-05 ~ 10-11，7 天）★ 决策门
 
@@ -199,15 +220,19 @@
 | **49 天不够** | 中高 | 赶不上截稿 | **10-25 决策门**：若那时 E4 尚未出数，转 IJCNN（2027-01-31），多 81 天 |
 | **初试与写作冲突** | 中 | 两头落空 | 内部硬截止 11-16；11-21 起完全切换 |
 | **跨域只有 CORD** | 已发生 | E2 单薄 | 如实写成「边界发现」——CORD 是零售收据，字段模式与采购订单不匹配，这本身就是有价值的结果 |
+| **Camera-ready 撞复试**（2027-03-19） | **新发现（10-02）** | 高 | 录用后改稿期落在复试 3~4 月。**对策**：camera-ready 只是格式与小幅修订，工作量 ≪ 初稿；但若被要求补实验则严重冲突。写作时把「可能被要求补的内容」尽量在初稿就做足 |
+| **页数上限未公布** | **新发现（10-02）** | 中 | 官网明确「still being confirmed」。按 **12 页** 写作，**10-20 / 11-10 复查**；若为 10 页则压缩 Discussion |
+| **强制现场 + 惠灵顿** | 已确认 | 高（钱） | 官网「exclusively in person」。差旅 ¥12–20k。若届时无法承担，只能放弃发表（论文集仍会收录？**需确认**——若缺席可能导致论文不被收录，这是重大风险，见 D23） |
 
 ---
 
 ## 8. 行动清单（可勾选）
 
 ### 立即（10-02 ~ 10-04）
-- [ ] **你**：确认 D1 / D2 / D3（本文件 §2 的建议答案）
+- [x] **你**：确认 D1 / D2 / D3（PAKDD 2027 / 投会议 / 冲突自动消解）— **2026-10-02 已确认**
 - [ ] **你**：决策 D13（Arm A 是否保留项号）
-- [ ] 核实 PAKDD 官网 CFP 五项细节
+- [x] 核实 PAKDD 官网 CFP（6 项已确认；**页数 / 投稿系统待官网公布**）
+- [ ] 实现 D21 证据链落盘（约 60 行）+ 打 tag `paper-v2`
 - [ ] 下载 Springer LNCS 模板，建可编译的 LaTeX 骨架
 
 ### 第一周（10-05 ~ 10-11）
