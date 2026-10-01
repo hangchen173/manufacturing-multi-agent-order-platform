@@ -19,7 +19,8 @@
 | A3 | 文献矩阵（20 行） | 进行中 | `03_LITERATURE.md` | 骨架已建，待逐篇精读填充 |
 | A4 | **新颖性判决实验** | ⛔ **G0 判定：C1 实证不支持** | `06_NOVELTY_EXPERIMENT.md` §11–§12 | **Go/No-Go 门禁已给出结论**。难度两档 × 模型三档、**共 50 次调用，0 个正向 discordant pair**，全部饱和。根因：任务太容易（基线字段准确率 0.998+，全库仅 0.19% 错误）。**待 D20 战略决策** |
 | A5 | 查院校「投出去」认定口径 | **阻塞** | — | 需用户执行 |
-| A6 | **C2 实证（核查成本 + 审计可复现性）** | ✅ **已完成（¥0）** | `13_VERIFIABILITY_EXPERIMENTS.md`、`scripts/verifiability_audit.py` | E7 成本比 **292:1**；E8 审计可复现性 **0%**（423 条记录 0 条带证据链）；顺带补上 **D16**（23,528 条定位符 **100% 可解析**） |
+| A6 | **C2 实证（核查成本 + 可核查覆盖率）** | ✅ **已完成（¥0 + 8 单验证跑）** | `13_VERIFIABILITY_EXPERIMENTS.md`、`scripts/verifiability_audit.py` | E7 成本比 **292:1**；E8 before **0%** → after **100%**（985/985 证据复算一致、8/8 记录带链、255/255 问题带定位符）；顺带补上 **D16**（**真的**做 ρ(ℓ,D) 复算，不再是自报） |
+| A7 | **D21 证据链外化与落盘** | ✅ **已完成** | `grounding_verifier.py`、`supervisor.py`、`order_processing.py`、`tests/test_evidence_chain.py` | tag **`paper-v2`**（`4e01e92`）；294 项测试全绿 |
 
 ### 阶段 B｜方法形式化与实验基建
 

@@ -16,6 +16,25 @@
 | 分支 | `paper-ccfc-prep` |
 | 冻结日期 | 2026-10-01 |
 
+**第二基线 `paper-v2`**（2026-10-02，D21 落地后）：
+
+| 项 | 值 |
+|---|---|
+| Git tag | **`paper-v2`** |
+| Commit hash（短） | `4e01e92` |
+| 与 v1 的差异 | 验证者在**接受**时也外化证据 + 证据链落盘（见 `13_VERIFIABILITY_EXPERIMENTS.md` §2.5） |
+| 是否改变任何判定结果 | **否**。纯增量外化，不触碰裁决路径 |
+
+**各实验基于哪个版本**（论文 Reproducibility 章必须写明）：
+
+| 实验 | 版本 |
+|---|---|
+| G0 判决实验（50 次调用） | `paper-v1-baseline` |
+| E7 核查成本（292:1） | `paper-v1-baseline` |
+| E8 的 **before** 测量（0%） | `paper-v1-baseline` |
+| E8 的 **after** 测量（100%） | **`paper-v2`** |
+| E1 / E3 / E4 主实验 | **`paper-v2`** |
+
 **冻结命令（可复现）**：
 
 ```bash
