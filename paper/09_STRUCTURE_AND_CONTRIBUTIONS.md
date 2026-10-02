@@ -3,6 +3,14 @@
 > 编制日期：2026-10-02
 > **本文件终结待决事项 D12**（`PAPER_PLAN.md` 与 `PAPER_PLAN_SCI_Q1.md` 的贡献数 / 基线数冲突）。
 > 冲突时以本文件为准。
+>
+> ⚠️ **2026-10-02 第二轮改判（本文件部分口径需随之调整）**：
+> ① **目标档位由 PAKDD 2027 改为 ICDAR 2027**（截稿 2027-02-20）；
+> ② **篇幅由 LNCS 12 页放宽到 17 页**——§0 表中「12 页放不下 4 条并列贡献」的裁决理由**不再成立**，
+>    但**贡献仍维持 3 条正式 + 1 条附带**（理由是 C4 本质为基建，与页数无关）；
+> ③ **C1 降级**：G0 判决实验已推翻 C1 的实证主张，D20 处置为 α+γ——
+>    **C1 保留为形式化主张**，**C2 升为主证据**。详见 `06_NOVELTY_EXPERIMENT.md` §12 与
+>    `13_VERIFIABILITY_EXPERIMENTS.md`。**G0 负面结果须正式写入论文**。
 
 ---
 
@@ -10,9 +18,9 @@
 
 | 冲突点 | `PAPER_PLAN.md`（简版） | `PAPER_PLAN_SCI_Q1.md`（详版） | **本文件裁决** | 理由 |
 |---|---|---|---|---|
-| 贡献数量 | 3 条（C1–C3） | 4 条（C1–C4） | **3 条正式 + 1 条附带** | LNCS 12 页放不下 4 条并列贡献；C4（评测协议）本质是基建，不是研究贡献 |
-| 基线数量 | 8 个 | 7 个 | **5 个** | 见 §3；49 天不可能实现 7–8 个 |
-| 目标档位 | 中科院一区 / CCF-C 期刊 | 中科院一区 / CCF-B | **CCF-C 会议（PAKDD 2027）** | 见 `08_SUBMISSION_PLAN.md` §2 |
+| 贡献数量 | 3 条（C1–C3） | 4 条（C1–C4） | **3 条正式 + 1 条附带** | C4（评测协议）本质是基建，不是研究贡献（**与页数无关**，17 页版亦维持此裁决） |
+| 基线数量 | 8 个 | 7 个 | **5 个** | 见 §3；瓶颈是**实现工时**而非页数 |
+| 目标档位 | 中科院一区 / CCF-C 期刊 | 中科院一区 / CCF-B | **CCF-C 会议（ICDAR 2027）** | 见 `08_SUBMISSION_PLAN.md` §0.1、§3 |
 | 方法命名 | 未命名 | **VEAP** | **VEAP（保留）** | 已有名字，且名字本身传达了机制 |
 
 ---
@@ -21,10 +29,13 @@
 
 | # | 标题 | 评价 |
 |---|---|---|
-| **A** | *Locators, Not Arguments: Machine-Checkable Evidence as the Debate Medium for Multi-Agent Document Extraction* | **推荐**。前半句直接给出主张，后半句给出场景与机制；含 multi-agent，契合 PAKDD 的 LLM & Agentic AI 专轨 |
+| **A** | *Locators, Not Arguments: Machine-Checkable Evidence as the Debate Medium for Multi-Agent Document Extraction* | **推荐**。前半句直接给出主张，后半句给出场景与机制；含 multi-agent + document extraction，**契合 ICDAR 2027 main track 明文征稿的 *agents for document AI* / *information extraction***，无需额外包装 |
 | B | *Evidence-Anchored Adversarial Verification: Machine-Checkable Locators for LLM-Based Structured Document Extraction* | 稳妥但平；"Adversarial Verification" 略泛 |
-| C | *From Persuasion to Proof: Anchoring Multi-Agent Debate in Machine-Checkable Document Locators* | 有力，但 "Proof" 略显夸张，可能招致审稿人反感 |
+| C | *From Persuasion to Proof: Anchoring Multi-Agent Debate in Machine-Checkable Document Locators* | 有力，但 "Proof" 略显夸张，可能招致审稿人反感；且 C1 已降级，"Proof" 与实证不符 |
 
+> ⚠️ **C1 降级后标题需微调**：标题 A 的「Locators, Not Arguments」暗示「locator 更优」，
+> 而 G0 已证伪「locator 提升**修正率**」。建议改为强调**可核查性**而非**优越性**，
+> 例如：*Machine-Checkable Evidence for Agentic Document Extraction: Verifiability Without Accuracy Gains*。
 > 投稿前按最终选定的会议风格再定。**双盲投稿时标题不得泄露作者信息**。
 
 ---
@@ -144,21 +155,26 @@
 
 ---
 
-## 4. 章节结构（LNCS 单栏，目标 12 页）
+## 4. 章节结构（LNCS 单栏，目标 **17 页**）
 
 | # | 章节 | 页数 | 状态 | 素材 |
 |---|---|---|---|---|
-| 1 | Introduction | 1.0 | 从零写（最后写） | 3 条贡献 |
+| 1 | Introduction | 1.5 | 从零写（最后写） | 3 条贡献 |
 | 2 | Related Work | 1.5 | 由文献矩阵生成 | `03_LITERATURE.md` |
-| 3 | Problem Formulation | 1.0 | **草稿已完成** | `11_PROBLEM_FORMULATION.md` |
-| 4 | Method | 3.0 | **草稿已完成** | `12_METHOD_DRAFT.md` |
+| 3 | Problem Formulation | 1.5 | **草稿已完成** | `11_PROBLEM_FORMULATION.md` |
+| 4 | Method | 3.5 | **草稿已完成** | `12_METHOD_DRAFT.md` |
 | 5 | Experimental Setup | 1.5 | 待写（依赖实验） | `10_EXPERIMENTS.md` |
-| 6 | Results | 2.5 | 待实验产出 | E1–E6 |
-| 7 | Discussion & Limitations | 1.0 | 从零写 | — |
+| 6 | Results | 3.5 | 待实验产出 | E1/E3/E4/E7/E8 + **G0 负面结果** |
+| 7 | Discussion & Limitations | 1.5 | 从零写 | — |
 | 8 | Conclusion | 0.5 | 从零写 | — |
-| — | References | — | — | 20+ 条 |
+| — | References | 2.0 | — | 20+ 条 |
 
-**合计 12.0 页**（不含参考文献）。
+**合计 17.0 页**（含参考文献）。
+
+> ⚠️ **2026-10-02 第二轮修订**：篇幅由 12 → **17 页**（ICDAR 2027 页限）。
+> 增量 5 页主要给了 **Results（+1.0）** 与 **Method（+0.5）**、**Problem Formulation（+0.5）**、
+> **Discussion（+0.5）**，以及 Introduction（+0.5）——**核心用途是容纳
+> 「G0 负面结果」与「C2 可核查性实证（E7/E8）」**，这两块在 12 页版里没有位置。
 
 ---
 
@@ -193,7 +209,7 @@
 | 文件 | 需要同步的改动 |
 |---|---|
 | `04_TERMINOLOGY.md` | 贡献从「3 条草稿 + C4」改为「3 条正式 + 1 条附带」 |
-| `05_OUTLINE.md` | 页数改为 LNCS 12 页；基线改为 5 个 |
+| `05_OUTLINE.md` | 页数改为 LNCS **17 页**（2026-10-02 第二轮）；基线改为 5 个 |
 | `docs/PAPER_PLAN_SCI_Q1.md` | 标注「Q1 期刊版，本次不适用」 |
 | `docs/PAPER_PLAN.md` | 同上 |
 | `02_DECISIONS.md` | D12 关闭 |

@@ -111,6 +111,9 @@ grep -rh "def test_" tests --include="*.py" | wc -l
 
 ## 5. 目标会议 CFP 实测（D14，2026-10-02 官网核实）
 
+> 🔴 **本节已于 2026-10-02 第二轮被取代**：主投目标由 PAKDD 2027 改为 **ICDAR 2027**。
+> **现行口径见 §6**。本节保留为**历史记录**（改判理由见 `08_SUBMISSION_PLAN.md` §0.1）。
+>
 > 来源：`https://www.pakdd2027.org/pages/calls/research`、`/pages/dates`、`/pages/calls/llm-agentic`
 > 核实日期：**2026-10-02**。以下为官网原文口径，不再依赖第三方汇总站。
 
@@ -129,6 +132,15 @@ grep -rh "def test_" tests --include="*.py" | wc -l
 | **页数上限** | 官网原文：「The page limit and the submission site are **still being confirmed**」 | ⏳ **待公布** |
 | 投稿系统 | 同上，尚未公布 | ⏳ **待公布** |
 | 预印本 / arXiv 政策 | CFP 未提及 | ⚠️ 按「投稿前不主动公开」保守处理 |
+
+### 5.0 未选 PAKDD 的原因（2026-10-02 第二轮记录）
+
+1. **G0 判决实验已推翻 C1 的实证主张**，论文需重建——**11-20 截稿只余 7 周，不够**；
+2. **专轨附带排除条款**：「multi-agent systems in the general sense, **without a data science or
+   knowledge discovery focus**, is outside the scope」→ 需额外包装；
+3. **11-20 截稿把工作量压在 10–11 月**（考研冲刺期）——「12 月不碰论文」只保护了 12 月；
+4. 页数上限到 10-02 仍「still being confirmed」，且为 **12 页**（ICDAR 为 **17 页**）；
+5. 惠灵顿**必须现场**且差旅 **¥12–20k**（吉隆坡**免签**、¥1.5–3k）。
 
 ### 5.1 内部硬截止的时区换算
 
@@ -168,3 +180,76 @@ grep -rh "def test_" tests --include="*.py" | wc -l
 
 > 本文的数据抽取 / 知识发现属性**必须写在标题与摘要的第一句**，否则有被判 out-of-scope 的风险。
 > 这正是标题候选 A（*...for Multi-Agent Document Extraction*）优于纯机制型标题的原因。
+>
+> ⭐ **2026-10-02 改判后**：ICDAR 2027 **没有**此类排除条款——「多智能体做文档抽取」就是它的正题。
+> 该包装负担解除。
+
+---
+
+## 6. ⭐ 现行目标会议：ICDAR 2027 实测（2026-10-02，三源交叉核实）
+
+> 来源：`mldeadlines.com/conference/icdar-2027`、`aiwhatson.com/event/icdar-2027-*`、
+> `beri.net/events/icdar-2027`（三者均引 `icdar2027.org` 官方 CFP，**互相一致**）。
+> ⚠️ **`icdar2027.org` 有 Cloudflare 反爬，本次未能直接抓取官网**——
+> **投稿前必须人工打开 `/call-for-papers` 与 `/important-dates` 复核本节全部条目**。
+
+| 项 | 核实结果 | 一致性 |
+|---|---|---|
+| 会议全称 | 21st International Conference on Document Analysis and Recognition (ICDAR 2027) | ✅ |
+| 会期 / 地点 | **2027-08-18 ~ 22，马来西亚 吉隆坡**（预计约 450 人） | ✅ |
+| **摘要截稿** | **2027-01-31 23:59 AoE**（**"no extension"**） | ✅ 三源 |
+| **全文截稿** | **2027-02-20 23:59 AoE** | ✅ 三源 |
+| 审稿意见返还 | **2027-04-20** | ✅ 两源 |
+| **Rebuttal 截止** | **2027-04-27**（窗口 **7 天**） | ✅ 两源 |
+| **录用通知** | **2027-05-15** | ✅ 两源 |
+| **Camera-ready** | **2027-06-05** | ⚠️ 单源 |
+| 模板 / 页数 | **Springer LNCS，最多 17 页** | ✅ 两源 |
+| 审稿制度 | **双盲 + rebuttal 环节** | ✅ 两源 |
+| 出版 / 检索 | Springer LNCS 论文集；EI / Scopus | ✅ |
+| 另有轨道 | **ICDAR–IJDAR journal track**（独立期刊轨，可作备投） | ⚠️ 单源 |
+| 录用率 | 历史平均约 **40.3%** | ✅ `openresearch.org/wiki/ICDAR` |
+| 现场要求 | **in-person**；每篇录用论文至少一名作者完成 **full main conference registration** | ✅ |
+| 签证 | **中国公民免签**——《中马互免持公务普通护照和普通护照人员签证的协定》**2025-07-17 生效**（条约级），单次停留 ≤30 日 | ✅ |
+
+### 6.1 内部硬截止的时区换算
+
+| 口径 | 时刻 |
+|---|---|
+| AoE 2027-02-20 23:59 | **北京时间 2027-02-21 19:59** |
+| **摘要** AoE 2027-01-31 23:59 | **北京时间 2027-02-01 19:59** |
+| 内部硬截止（自设） | **2027-02-16**，留 4 天缓冲 |
+| 摘要内部截止（自设） | **2027-01-29**，留 2 天缓冲 |
+
+### 6.2 ⭐ main track 征稿方向与本项目的对应（决定性的契合度证据）
+
+ICDAR 2027 CFP 把以下议题列为**一等公民**（非 workshop 边角）：
+
+| ICDAR 2027 main track topic（官方 CFP） | 本文对应 |
+|---|---|
+| ***agents for document AI*** | 11 Agent + 对抗协议（**正题，无需包装**） |
+| ***multimodal LLMs for documents*** | 图片路径抽取（`extractor.py:196`） |
+| ***document reasoning models*** | PROPOSE → CHALLENGE → VERDICT 对抗推理 |
+| *foundation models for document understanding* | LLM 抽取器 |
+| ***information extraction and document retrieval*** | 结构化字段抽取（订单明细） |
+| *table and formula recognition* | 表格单元格定位符 `cell(sheet,row,col)` |
+| *document forensics and provenance* | **C1** 证据三元组 `E=(kind, locator, value)` + ρ(ℓ,D) 复算 |
+| *private and secure document understanding* | 结构性上下文隔离（`FORBIDDEN_KEYS`） |
+| *Benchmarks / evaluation*（散见） | **C2** 核查成本 292:1 + 审计可核查覆盖 0%→100% |
+
+> **写作含义**：Introduction 与 Related Work 应直接引用 ICDAR CFP 的措辞
+> （*agents for document AI* / *document reasoning* / *information extraction* / *provenance*）
+> 来定位本文。**注意 §5.3 的 PAKDD 专轨映射表仍可用于贡献-议题对应，但引用时须换成 ICDAR 的措辞。**
+
+### 6.3 17 页的章节预算
+
+| 章 | 页数 | 内容 |
+|---|---|---|
+| 1 Introduction | 1.5 | 定位 + 三条贡献 |
+| 2 Related Work | 1.5 | 文献矩阵生成 |
+| 3 Problem Formulation | 1.5 | 7 个定义 + Proposition 1 |
+| 4 Method（VEAP） | 3.5 | Algorithm 1 + 上下文隔离 + 预算熔断 |
+| 5 Experiments | 5.0 | E1/E3/E4/E7/E8 + **G0 负面结果（§5.4）** |
+| 6 Discussion & Limitations | 1.5 | 诚实报告边界 |
+| 7 Conclusion | 0.5 | — |
+| References | 2.0 | — |
+| **合计** | **17.0** | — |

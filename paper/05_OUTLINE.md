@@ -2,7 +2,8 @@
 
 > 用途：把现有代码资产映射到论文章节，明确「哪些章可直接改写、哪些章必须从零写」。
 > 来源：`../docs/PAPER_PLAN_SCI_Q1.md` §5、`../docs/PAPER_PLAN.md` §5。
-> 目标篇幅：**LNCS 单栏约 12 页**，其中 Method + Results 占 5.5 页。
+> 目标篇幅：**LNCS 单栏约 17 页**（2026-10-02 第二轮：主投 ICDAR 2027，页限由 12 放宽到 17），
+> 其中 Method + Results 占 8.5 页。章节页数预算见 `08_SUBMISSION_PLAN.md` §2.2 / `01_CONFIG.md` §6.3。
 >
 > ⚠️ **本文件已于 2026-10-02 被以下文件细化，冲突时以后者为准**：
 > - `09_STRUCTURE_AND_CONTRIBUTIONS.md` — 贡献与章节结构的**最终口径**（已关闭 D12）
